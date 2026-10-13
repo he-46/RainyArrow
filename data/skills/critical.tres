@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunSkillData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/run_skill_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"critical"
+title = "暴击"
+description = "暴击率 +5%，暴击倍率 +0.25"
+additions = {"crit_chance": 0.05, "crit_multiplier": 0.25}
+damage_factor = 1.0
+cost = 10
+cost_growth = 1.5
+max_level = 8
+mastery_description = "暴击率、暴伤与增伤，收益渐缓"
+mastery_cost = 282
+mastery_cost_growth = 1.18
+mastery_max_level = 100
+mastery_decay = 0.12
+mastery_additions = {"crit_chance": 0.02, "crit_multiplier": 0.2}
+mastery_flat_additions = {}
+mastery_damage_bonus = 0.01

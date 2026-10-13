@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="ProgressionRules" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/progression_rules.gd" id="1"]
+[resource]
+script = ExtResource("1")
+first_level_score = 100.0
+extra_score_per_level = 50.0
+max_level = 1000

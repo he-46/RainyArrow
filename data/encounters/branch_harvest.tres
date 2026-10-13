@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "branch_harvest"
+title = "枝上丰收"
+description = "子箭直击或回响击倒，金币 +50%。母箭无加成；同靶只结算一次，需要已获得分裂。"
+is_trait = true
+trait_key = "branch_harvest"
+requires_trait = "piercing_split"
+color = Color(0.81, 0.76, 0.46, 1)

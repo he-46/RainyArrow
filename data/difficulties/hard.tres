@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="DifficultyData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/difficulty_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "hard"
+title = "困难"
+target_health = 1.5
+boss_health = 2.0
+score = 1.5
+health_growth = 0.06

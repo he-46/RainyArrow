@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "ricochet_haste"
+title = "借壁生风"
+description = "每次边缘反弹后速度乘 1.25，最高 2000；保持反射方向。需要已有反弹次数。"
+is_trait = true
+trait_key = "ricochet_haste"
+color = Color(0.52, 0.78, 0.84, 1)

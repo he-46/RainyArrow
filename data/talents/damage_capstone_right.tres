@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_capstone_right"
+tree = 2
+title = "透甲锋芒"
+description = "每 1 点有效穿甲使伤害 +0.5%（最多 +30%）；包含暴击转化的穿甲。"
+parent = "damage_advanced_right"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 1
+effects = {"damage_per_penetration": 0.005}

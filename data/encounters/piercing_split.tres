@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "piercing_split"
+title = "一箭生枝"
+description = "每支主箭首次贯穿时分出 2 支半伤害子箭；子箭不再分裂。需要穿甲高于靶子护甲。"
+is_trait = true
+trait_key = "piercing_split"
+color = Color(0.68, 0.81, 0.55, 1)

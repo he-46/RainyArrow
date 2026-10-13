@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="CosmeticData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/cosmetic_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "bow_ember"
+slot = "bow"
+title = "余烬长弓"
+required_defeats = 25
+primary = Color(0.94, 0.43, 0.24, 1)
+secondary = Color(1, 0.75, 0.4, 1)
+accent = Color(0.45, 0.2, 0.22, 1)
+style = 2

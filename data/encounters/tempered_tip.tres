@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "tempered_tip"
+title = "淬锋箭簇"
+description = "穿甲增加 3，抵消更多护甲；穿甲严格高于护甲才能贯穿。"
+group = "penetration"
+additions = {"armor_penetration": 3}
+color = Color(0.63, 0.79, 0.85, 1)

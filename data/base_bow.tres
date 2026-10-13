@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="BowStats" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/bow_stats.gd" id="1"]
+[resource]
+script = ExtResource("1")
+damage = 24.0
+arrow_count = 1
+arrow_size = 1.0
+crit_chance = 0.1
+crit_multiplier = 2.0
+reload_seconds = 0.65
+launch_speed = 490.0
+gravity = 230.0
+spread_degrees = 6.0
+armor_penetration = 0
+bounces = 0

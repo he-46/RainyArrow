@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"critical"
+title = "致命一击"
+description = "暴击倍率 +0.5"
+branch = "精准"
+stat = &"crit_multiplier"
+amount = 0.5
+cost = 25
+cost_growth = 1.6
+max_level = 3
+prerequisite = &"focus"
+random_only = false
+

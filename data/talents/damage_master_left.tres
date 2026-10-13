@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_master_left"
+tree = 2
+title = "摧枯拉朽"
+description = "额外增加 20 点基础伤害。"
+parent = "damage_left"
+required_rank = 2
+max_rank = 1
+base_cost = 4
+tier = 2
+side = 0
+exclusive_group = "damage_master"
+effects = {"damage": 20}

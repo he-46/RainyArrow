@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "steady_power"
+title = "弦劲渐长"
+description = "基础伤害增加 12，再计算数量减伤、归一与有效上限。"
+group = "damage"
+additions = {"damage": 12.0}
+color = Color(0.9, 0.58, 0.43, 1)

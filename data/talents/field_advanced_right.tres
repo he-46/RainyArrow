@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "field_advanced_right"
+tree = 3
+title = "宽刃巨靶"
+description = "每级：普通靶子大小 +10%，箭矢大小 +15%。不增加靶子血量。"
+parent = "field_master_right"
+required_rank = 1
+max_rank = 2
+base_cost = 5
+cost_step = 2
+tier = 3
+side = 1
+effects = {"target_scale": 0.1, "arrow_size": 0.15}

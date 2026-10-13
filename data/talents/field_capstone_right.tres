@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "field_capstone_right"
+tree = 3
+title = "巨矢会心"
+description = "暴击倍率 +0.4；箭矢大小每超过初始值 100%，伤害 +10%（最多 +30%）。"
+parent = "field_advanced_right"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 1
+effects = {"crit_multiplier": 0.4, "damage_per_size": 0.1}

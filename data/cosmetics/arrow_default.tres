@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="CosmeticData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/cosmetic_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "arrow_default"
+slot = "arrow"
+title = "青羽木箭"
+primary = Color(0.933333, 0.847059, 0.65098, 1)
+secondary = Color(0.466667, 0.760784, 0.627451, 1)
+accent = Color(0.913725, 0.956863, 0.843137, 1)

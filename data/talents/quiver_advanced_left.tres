@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "quiver_advanced_left"
+tree = 0
+title = "余箭储备"
+description = "每级：初始拉弓次数 +2，击倒回复概率 +2%。"
+parent = "quiver_master_left"
+required_rank = 1
+max_rank = 2
+base_cost = 5
+cost_step = 2
+tier = 3
+side = 0
+effects = {"initial_shots": 2, "kill_refund": 0.02}

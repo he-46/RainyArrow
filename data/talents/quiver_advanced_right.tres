@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "quiver_advanced_right"
+tree = 0
+title = "凝神续弦"
+description = "每级：暴击率 +4%，有效暴击回复概率 +1%。"
+parent = "quiver_master_right"
+required_rank = 1
+max_rank = 2
+base_cost = 5
+cost_step = 2
+tier = 3
+side = 1
+effects = {"crit_chance": 0.04, "crit_refund": 0.01}

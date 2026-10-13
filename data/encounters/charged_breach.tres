@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "charged_breach"
+title = "蓄势穿甲"
+description = "按本次拉力获得额外穿甲：满拉 +8，半拉 +4，向下取整。与反弹穿甲及余势组合，子箭继承拉力。"
+is_trait = true
+trait_key = "charged_breach"
+color = Color(0.82, 0.70, 0.44, 1)

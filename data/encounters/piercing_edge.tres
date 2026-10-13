@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "piercing_edge"
+title = "越靶越锋"
+description = "穿出受伤靶子后，这支箭后续伤害 +15%，最多 5 层（+75%）。护板不叠层，子箭继承已获得层数。"
+is_trait = true
+trait_key = "piercing_edge"
+color = Color(0.68, 0.81, 0.55, 1)

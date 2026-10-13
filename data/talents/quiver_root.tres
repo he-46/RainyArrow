@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "quiver_root"
+tree = 0
+title = "箭袋扩容"
+description = "每级增加 2 次初始拉弓机会。"
+parent = ""
+required_rank = 1
+max_rank = 3
+base_cost = 1
+tier = 0
+side = 0
+exclusive_group = ""
+effects = {"initial_shots": 2}

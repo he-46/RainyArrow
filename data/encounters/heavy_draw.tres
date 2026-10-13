@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "heavy_draw"
+title = "慢弦重箭"
+description = "伤害 ×1.4，装填时间 ×1.35。后续升级继续重算，老箭与当前装填不变。"
+is_trait = true
+has_debuff = true
+trait_key = "heavy_draw"
+color = Color(0.83, 0.60, 0.50, 1)

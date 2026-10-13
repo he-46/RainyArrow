@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "critical_ricochet"
+title = "舍锋借势"
+description = "暴击倍率回到 ×1；每 20 个百分点额外暴伤换 1 反弹，不足不兑换。200% 倍率换 5 次，后续仍转化。"
+is_trait = true
+has_debuff = true
+trait_key = "critical_ricochet"
+color = Color(0.64, 0.63, 0.86, 1)

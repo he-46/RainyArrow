@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "bullseye_wave"
+title = "靶心回响"
+description = "靶心回响半径140，最多6靶各受实际伤害40%，再减甲。每箭每靶一次；不暴击、不连锁。"
+is_trait = true
+trait_key = "bullseye_wave"
+color = Color(0.49, 0.77, 0.82, 1)

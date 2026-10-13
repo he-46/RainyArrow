@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TargetData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/target_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"standard"
+title = "木环靶"
+durability = 48.0
+radius = 23.0
+color = Color(0.83, 0.55, 0.34, 1)
+break_gold = 8
+defeat_score = 40.0

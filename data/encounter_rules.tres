@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EncounterRules" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_rules.gd" id="1"]
+[resource]
+script = ExtResource("1")
+kills_per_reward = 10
+split_children = 2
+split_damage = 0.5
+split_degrees = 12.0
+bounce_multiplier = 1.25
+projectile_speed_limit = 2000.0
+crit_per_extra_arrow = 0.02
+unity_damage_exponent = 1.0
+unity_size_exponent = 0.5
+crit_per_penetration = 0.02
+extra_crit_per_bounce = 0.20
+penetration_damage = 0.15
+penetration_limit = 5
+excess_damage = 0.02
+excess_limit = 1.0
+echo_damage = 0.5
+bounce_penetration = 3
+bounce_penetration_limit = 5
+charged_penetration = 8
+bullseye_radius = 140.0
+bullseye_damage = 0.4
+bullseye_targets = 6
+critical_damage = 0.12
+critical_limit = 5
+size_bullseye = 0.15
+size_bullseye_limit = 0.75
+child_gold_bonus = 0.5
+child_bounces = 2
+slender_size_factor = 0.7
+slender_speed_factor = 1.25
+heavy_damage_factor = 1.4
+heavy_reload_factor = 1.35

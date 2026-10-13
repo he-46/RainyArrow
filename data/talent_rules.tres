@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="TalentRules" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/talent_rules.gd" id="1"]
+[resource]
+script = ExtResource("1")
+max_refunds_per_draw = 1
+combo_bonus_cap = 5
+arrow_crit_bonus_cap = 0.1
+penetration_damage_bonus_cap = 0.3
+arrow_damage_bonus_cap = 0.28
+size_damage_bonus_cap = 0.3

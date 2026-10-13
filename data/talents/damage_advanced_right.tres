@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_advanced_right"
+tree = 2
+title = "破甲疾矢"
+description = "每级：穿甲 +3，箭矢初速度 +25。"
+parent = "damage_master_right"
+required_rank = 1
+max_rank = 2
+base_cost = 5
+cost_step = 2
+tier = 3
+side = 1
+effects = {"armor_penetration": 3, "launch_speed": 25}

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "quick_nock"
+title = "箭势渐盛"
+description = "伤害加成 +5%，同类叠层累加；2 层为 +10%，随基础伤害成长。"
+group = "damage_percent"
+damage_bonus = 0.05
+color = Color(0.71, 0.8, 0.52, 1)

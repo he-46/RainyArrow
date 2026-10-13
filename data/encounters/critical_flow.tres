@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "critical_flow"
+title = "锋锐回流"
+description = "暴击后此箭后续伤害 +12%，最多5层。子箭继承；回响及零暴击率不叠层。"
+is_trait = true
+trait_key = "critical_flow"
+color = Color(0.84, 0.62, 0.52, 1)

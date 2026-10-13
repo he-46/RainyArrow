@@ -1,0 +1,35 @@
+.godot/
+.tools/
+builds/
+artifacts/
+*.tmp
+*.bak
+*.log
+
+# Generated captures, exports, and local editor/tool data.
+artfacts/
+exports/
+export_templates/
+export_credentials.cfg
+*.pck
+*.exe
+
+# Player state and local test profiles (Godot user:// normally lives outside this repo).
+saves/
+savegames/
+user_data/
+.save/
+save.json
+*-save.json
+*.save
+*.sav
+*.legacy-v*
+
+# Local credentials and machine-specific files.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.DS_Store
+Thumbs.db

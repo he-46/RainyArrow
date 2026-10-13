@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "unified_arrow"
+title = "万箭归一"
+description = "主箭归为 1；原箭数 N（最多 32）令伤害 ×N、尺寸 ×√N。后续增箭仍转化，分裂保留。"
+is_trait = true
+has_debuff = true
+trait_key = "unified_arrow"
+color = Color(0.86, 0.64, 0.43, 1)

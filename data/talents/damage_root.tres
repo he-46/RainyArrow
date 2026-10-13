@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_root"
+tree = 2
+title = "基础锋芒"
+description = "每级增加 4 点基础伤害。"
+parent = ""
+required_rank = 1
+max_rank = 3
+base_cost = 1
+tier = 0
+side = 0
+exclusive_group = ""
+effects = {"damage": 4}

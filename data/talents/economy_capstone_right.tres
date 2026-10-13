@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "economy_capstone_right"
+tree = 1
+title = "一箭千金"
+description = "靶心击倒金币加成 +40%，暴击率 +8%。"
+parent = "economy_advanced_right"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 1
+effects = {"bullseye_gold": 0.4, "crit_chance": 0.08}

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "windfall"
+title = "丰收之风"
+description = "金币获取倍率增加 0.25，提高之后结算的击倒金币收益。"
+group = "gold"
+additions = {"gold_multiplier": 0.25}
+color = Color(0.93, 0.78, 0.47, 1)

@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "rainfall"
+title = "箭雨初临"
+description = "每次拉弓额外发射 1 支箭，仍只消耗一次拉弓机会。"
+group = "arrows"
+additions = {"arrow_count": 1}
+color = Color(0.55, 0.77, 0.70, 1)

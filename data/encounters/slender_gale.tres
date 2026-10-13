@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "slender_gale"
+title = "瘦箭疾风"
+description = "箭头尺寸 ×0.7，初速度 ×1.25。碰撞体一起缩小，尺寸不低于0.5；后续升级仍参与。"
+is_trait = true
+has_debuff = true
+trait_key = "slender_gale"
+color = Color(0.60, 0.79, 0.59, 1)

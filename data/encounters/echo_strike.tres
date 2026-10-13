@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "echo_strike"
+title = "回声重击"
+description = "反弹后，下一次伤害命中 +50%，命中后消耗。连续反弹只刷新，护板不消耗；需要反弹次数。"
+is_trait = true
+trait_key = "echo_strike"
+color = Color(0.49, 0.77, 0.82, 1)

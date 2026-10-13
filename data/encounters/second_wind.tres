@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "second_wind"
+title = "再挽弓弦"
+description = "立即恢复 3 次拉弓机会，继续这一局的冒险。"
+group = "draws"
+draws = 3
+color = Color(0.61, 0.73, 0.86, 1)

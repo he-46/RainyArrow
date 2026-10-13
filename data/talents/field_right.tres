@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "field_right"
+tree = 3
+title = "放大靶面"
+description = "每级增加 15% 靶子大小。"
+parent = "field_root"
+required_rank = 1
+max_rank = 2
+base_cost = 2
+tier = 1
+side = 1
+exclusive_group = ""
+effects = {"target_scale": 0.15}

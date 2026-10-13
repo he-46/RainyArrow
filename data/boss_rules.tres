@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="BossRules" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/boss_rules.gd" id="1"]
+[resource]
+script = ExtResource("1")
+kills_per_boss = 100
+title = "铁弦巨靶"
+health = 2880.0
+health_growth = 0.6
+armor = 20
+armor_growth = 6
+score = 1200.0
+gold = 240.0
+reward_growth = 0.5
+width = 46.0
+radius = 62.0
+phase_health_ratio = 0.5
+weak_multiplier = 1.75
+weak_half_height = 12.0
+weak_armor_reduction = 12.0
+shield_width = 12.0
+shield_height = 46.0
+shield_gap = 23.0
+shield_armor_bonus = 8.0
+body_amplitude = 24.0
+body_frequency = 1.7
+shield_amplitude = 48.0
+shield_frequency = 2.3
+victory_draws = 3
+draws_growth_rounds = 2
+victory_draws_cap = 6

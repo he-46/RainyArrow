@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "broad_precision"
+title = "广锋正中"
+description = "尺寸每超出1.0，靶心增伤 +15%，最多 +75%。中心判定不变，Boss弱点适用。"
+is_trait = true
+trait_key = "broad_precision"
+color = Color(0.68, 0.81, 0.55, 1)

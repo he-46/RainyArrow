@@ -1,0 +1,8 @@
+[gd_resource type="Resource" script_class="FieldRules" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/field_rules.gd" id="1"]
+[resource]
+script = ExtResource("1")
+health_growth = 0.06
+reward_growth = 0.08
+defeats_per_armor = 5
+respawn_seconds = 1.4

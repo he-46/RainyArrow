@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "economy_root"
+tree = 1
+title = "金币效率"
+description = "每级增加 15% 击倒金币。"
+parent = ""
+required_rank = 1
+max_rank = 3
+base_cost = 1
+tier = 0
+side = 0
+exclusive_group = ""
+effects = {"gold_multiplier": 0.15}

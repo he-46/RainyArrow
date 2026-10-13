@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "quiver_capstone_left"
+tree = 0
+title = "长猎不息"
+description = "初始拉弓次数 +4，伤害 +10%。回复仍每次拉弓合计最多一次。"
+parent = "quiver_advanced_left"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 0
+effects = {"initial_shots": 4, "damage_bonus": 0.1}

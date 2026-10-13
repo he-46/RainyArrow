@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_capstone_left"
+tree = 2
+title = "摧城重弩"
+description = "伤害 +20%，箭矢大小 +30%。"
+parent = "damage_advanced_left"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 0
+effects = {"damage_bonus": 0.2, "arrow_size": 0.3}

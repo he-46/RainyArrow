@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "field_capstone_left"
+tree = 3
+title = "万箭回响"
+description = "弹射次数 +1；齐射每多一支箭，伤害 +4%（最多 +28%）。按箭矢归一前的数量计算。"
+parent = "field_advanced_left"
+required_rank = 2
+max_rank = 1
+base_cost = 10
+cost_step = 0
+tier = 4
+side = 0
+effects = {"bounces": 1, "damage_per_arrow": 0.04}

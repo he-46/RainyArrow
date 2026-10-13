@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"wind"
+title = "顺风之弦"
+description = "本局初速度 +70"
+branch = "赐福"
+stat = &"launch_speed"
+amount = 70
+cost = 0
+cost_growth = 1.6
+max_level = 1
+prerequisite = &""
+random_only = true
+

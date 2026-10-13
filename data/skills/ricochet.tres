@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunSkillData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/run_skill_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"ricochet"
+title = "弹射"
+description = "边缘反弹 +1 次，按碰撞法线反射"
+additions = {"bounces": 1}
+damage_factor = 1.0
+cost = 14
+cost_growth = 1.5
+max_level = 6
+mastery_description = "反弹、穿甲与初速度；后两项渐缓"
+mastery_cost = 177
+mastery_cost_growth = 1.18
+mastery_max_level = 100
+mastery_decay = 0.12
+mastery_additions = {"armor_penetration": 2.0, "launch_speed": 6.0}
+mastery_flat_additions = {"bounces": 1}
+mastery_damage_bonus = 0

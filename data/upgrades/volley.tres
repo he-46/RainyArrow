@@ -1,0 +1,16 @@
+[gd_resource type="Resource" script_class="UpgradeData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/upgrade_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"volley"
+title = "双生箭"
+description = "每次拉弓多发射 1 支箭"
+branch = "箭雨"
+stat = &"arrow_count"
+amount = 1
+cost = 32
+cost_growth = 1.6
+max_level = 3
+prerequisite = &"haste"
+random_only = false
+

@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "quiver_right"
+tree = 0
+title = "精准回收"
+description = "每级：有效暴击有 2% 概率恢复一次拉弓。"
+parent = "quiver_root"
+required_rank = 1
+max_rank = 2
+base_cost = 2
+tier = 1
+side = 1
+exclusive_group = ""
+effects = {"crit_refund": 0.02}

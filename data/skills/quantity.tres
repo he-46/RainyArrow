@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunSkillData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/run_skill_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"quantity"
+title = "数量"
+description = "每级多 1 支箭，单箭伤害乘 85%"
+additions = {"arrow_count": 1}
+damage_factor = 0.85
+cost = 12
+cost_growth = 1.5
+max_level = 6
+mastery_description = "减轻齐射减伤并增伤；六阶后加箭"
+mastery_cost = 150
+mastery_cost_growth = 1.18
+mastery_max_level = 100
+mastery_decay = 0.12
+mastery_additions = {}
+mastery_flat_additions = {}
+mastery_damage_bonus = 0.02

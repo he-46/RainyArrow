@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "economy_master_right"
+tree = 1
+title = "靶心专精"
+description = "靶心击倒金币加成额外 +60%。"
+parent = "economy_right"
+required_rank = 2
+max_rank = 1
+base_cost = 4
+tier = 2
+side = 1
+exclusive_group = "economy_master"
+effects = {"bullseye_gold": 0.6}

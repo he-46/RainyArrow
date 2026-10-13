@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "wall_forging"
+title = "借壁破甲"
+description = "每次反弹令这支箭穿甲 +3，最多 5 层（+15）。子箭继承，下一次拉弓重新开始；需要反弹次数。"
+is_trait = true
+trait_key = "wall_forging"
+color = Color(0.49, 0.77, 0.82, 1)

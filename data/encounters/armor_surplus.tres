@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "armor_surplus"
+title = "破甲余势"
+description = "穿甲每高于命中部位护甲 1 点，这次伤害 +2%，最多 +100%。按本次护甲计算，护板不产生伤害。"
+is_trait = true
+trait_key = "armor_surplus"
+color = Color(0.82, 0.70, 0.44, 1)

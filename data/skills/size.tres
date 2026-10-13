@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="RunSkillData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/run_skill_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = &"size"
+title = "大小"
+description = "箭矢尺寸 +35%，增加箭头碰撞半径"
+additions = {"arrow_size": 0.35}
+damage_factor = 1.0
+cost = 10
+cost_growth = 1.5
+max_level = 8
+mastery_description = "碰撞尺寸与初速度，收益渐缓"
+mastery_cost = 282
+mastery_cost_growth = 1.18
+mastery_max_level = 100
+mastery_decay = 0.12
+mastery_additions = {"arrow_size": 0.15, "launch_speed": 8.0}
+mastery_flat_additions = {}
+mastery_damage_bonus = 0

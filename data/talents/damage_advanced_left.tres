@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_advanced_left"
+tree = 2
+title = "重箭锻造"
+description = "每级：基础伤害 +6，箭矢大小 +10%。"
+parent = "damage_master_left"
+required_rank = 1
+max_rank = 2
+base_cost = 5
+cost_step = 2
+tier = 3
+side = 0
+effects = {"damage": 6, "arrow_size": 0.1}

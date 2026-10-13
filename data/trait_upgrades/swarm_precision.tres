@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="TraitUpgradeData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/trait_upgrade_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+max_level = 3
+cost = 260
+cost_growth = 1.8
+additions = {"crit_per_extra_arrow": 0.01}
+divisors = {}

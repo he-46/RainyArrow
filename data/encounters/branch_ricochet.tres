@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="EncounterData" load_steps=2 format=3]
+[ext_resource type="Script" path="res://scripts/data/encounter_data.gd" id="1"]
+[resource]
+script = ExtResource("1")
+id = "branch_ricochet"
+title = "继枝借壁"
+description = "子箭在继承余下反弹后再加2次，最多32次。母箭不加次数，子箭不再分裂；需要分裂。"
+is_trait = true
+trait_key = "branch_ricochet"
+requires_trait = "piercing_split"
+color = Color(0.52, 0.76, 0.80, 1)

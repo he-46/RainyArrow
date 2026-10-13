@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="TalentData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/data/talent_data.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "damage_right"
+tree = 2
+title = "破甲"
+description = "每级增加 2 点穿甲。"
+parent = "damage_root"
+required_rank = 1
+max_rank = 2
+base_cost = 2
+tier = 1
+side = 1
+exclusive_group = ""
+effects = {"armor_penetration": 2}
