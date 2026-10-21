@@ -36,15 +36,15 @@ func configure(options: Dictionary) -> void:
 			amount.text = "%d%%" % roundi(value * 100)
 			action.emit("setting", {"key": key, "value": value}))
 		row += 1
-	var music_note: Label = GameUI.label(panel, "音乐：暂无曲目，音量设置会保留", 14, GameUI.MUTED)
+	var music_note: Label = GameUI.label(panel, "主页面、营地与战斗使用各自的背景音乐", 14, GameUI.MUTED)
 	music_note.position = Vector2(208, 290)
-	var toggle_labels: Dictionary = {"muted": "静音（M）", "fullscreen": "全屏", "screen_shake": "命中震屏", "trajectory_guide": "瞄准轨迹"}
+	var toggle_labels: Dictionary = {"muted": "静音（M）", "fullscreen": "全屏", "screen_shake": "命中震屏", "trajectory_guide": "瞄准轨迹", "reduced_effects": "减少特效"}
 	row = 0
 	for key: String in toggle_labels:
 		var toggle := CheckButton.new()
 		toggle.name = key
 		toggle.text = toggle_labels[key]
-		toggle.position = Vector2(36 + (row % 2) * 410, 334 + (row / 2) * 66)
+		toggle.position = Vector2(36 + (row % 2) * 410, 322 + (row / 2) * 52)
 		toggle.size = Vector2(375, 48)
 		panel.add_child(toggle)
 		toggles[key] = toggle

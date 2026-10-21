@@ -54,7 +54,7 @@ func capture(name: String) -> void:
 	await RenderingServer.frame_post_draw
 	if main.router.route in ["home", "leaderboard"]:
 		var panel: LeaderboardPanel = main.router.page.get_node("LeaderboardPanel") as LeaderboardPanel
-		check(panel.get_global_rect().end.x <= 1228 and panel.get_global_rect().end.y <= 620, "ranking stays within page " + name)
+		check(panel.get_global_rect().end.x <= 1228 and panel.get_global_rect().end.y <= (684 if main.router.route == "home" else 620), "ranking stays within page " + name)
 		for index: int in range(1, 4):
 			var row: Panel = panel.get_node("Rank%d" % index) as Panel
 			check(row.position.y + row.size.y < panel.size.y and row.size.x > 500, "ranking row fits " + name + "/" + str(index))
@@ -69,8 +69,9 @@ func small(name: String) -> void:
 
 func disk_restart() -> void:
 	main._save_checkpoint()
+	var write_error: String = main.saves.last_error
 	var data: Dictionary = main.saves.read()
-	check(not data.is_empty() and main.save_notice.is_empty(), "native board checkpoint valid")
+	check(not data.is_empty() and write_error.is_empty() and main.saves.last_error.is_empty(), "native board checkpoint valid: " + write_error + main.saves.last_error)
 	var prior: Array[Dictionary] = main.session.profile.leaderboard.entries
 	main.queue_free()
 	await process_frame
@@ -96,13 +97,14 @@ func _run() -> void:
 	await small("home-empty-small")
 	var ids: Array[String] = []
 	var modes: Array[String] = ["normal", "hard", "hell", "hard", "normal", "hard"]
-	var scores: Array[float] = [40, 60, 80, 64.5, 40, 60]
+	# Current presets score ordinary targets at 1.0 / 1.2 / 1.4; global bonuses require a Boss.
+	var scores: Array[float] = [40, 48, 56, 51.6, 40, 48]
 	var ranks: Array[int] = [1, 1, 1, 2, 0, 0]
 	for index: int in range(modes.size()):
 		await click(button(main.router.page, "开始游戏   →"))
 		var mode: Button = main.router.page.get_node("Mode_" + modes[index]) as Button
 		await click(mode)
-		await click(button(main.router.page, "进入靶场  →"))
+		await click(main.router.page.get_node("Action_range") as Button)
 		freeze()
 		ids.append(main.run.run_id)
 		main.world.boss_enabled = false
@@ -114,13 +116,13 @@ func _run() -> void:
 		for other: int in range(1, main.world.targets.size()):
 			main.world.targets[other].anchor = Vector2(350 + 80 * other, 100)
 			main.world.targets[other].tick(0, 0)
-		check(target.reward_score == scores[index], "real generated target has mode-specific score " + str(index))
+		check(is_equal_approx(target.reward_score * main.run.contract_value("target_score", 1), scores[index]), "real target and selected contract produce expected score " + str(index))
 		bosses.fire(main.world, 1000, 3)
 		bosses.tick(main.world, 220)
 		main.run.rebuild_stats()
 		main._refresh()
 		main._save_checkpoint()
-		check(main.run.is_finished() and main.run.rank_at_finish == ranks[index] and main.run.defeat_score == scores[index] and main.save_notice.is_empty(), "real final volley saves expected rank " + str(index))
+		check(main.run.is_finished() and main.run.rank_at_finish == ranks[index] and is_equal_approx(main.run.defeat_score, scores[index]) and main.save_notice.is_empty(), "real final volley saves expected rank " + str(index))
 		var status: Label = main.hud.content.get_node("RankingStatus") as Label
 		check(status.text.contains("第 %d 名" % ranks[index]) if ranks[index] > 0 else status.text == "本局未进入前三", "result displays ranking decision " + str(index))
 		await capture("result-%d-%s" % [index + 1, modes[index]])
@@ -139,7 +141,7 @@ func _run() -> void:
 	await capture("home-restarted")
 	await small("home-restarted-small")
 	# Pause with already-settled score and a live volley must never submit.
-	main._new_run("hell")
+	main._new_run("hell", null, true) # Also retain coverage of historical fixed-mode records.
 	freeze()
 	main.session.record_defeat("prior-settled", 800)
 	bosses.fire(main.world, 24, 3)
@@ -151,7 +153,7 @@ func _run() -> void:
 	await disk_restart()
 	check(main.session.has_active_run() and main.run.mode_id == "hell" and main.run.defeat_score == 800 and main.session.profile.leaderboard.entries == prior, "active checkpoint does not rank on restart")
 	await click(button(main.router.page, "继续游戏"))
-	await click(button(main.router.page, "继续射箭  →"))
+	await click(main.router.page.get_node("Action_range") as Button)
 	freeze()
 	check(main.world.arrows.size() == 3 and not main.run.ranking_processed, "Continue restores live volley without admission")
 	main._on_action("hub", null)

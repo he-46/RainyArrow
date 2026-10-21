@@ -69,6 +69,7 @@ func _navigate(destination: String) -> void:
 		return
 	session.return_to_lobby()
 	hud.encounter_log_open = false
+	hud.details_open = false
 	if world != null:
 		world.reset_shake()
 		world.dragging = false
@@ -77,6 +78,7 @@ func _navigate(destination: String) -> void:
 	get_tree().paused = true
 	hud.hide()
 	router.show_page(destination, session, save_notice)
+	_sync_music()
 	_save_checkpoint()
 
 func _start_tutorial() -> void:
@@ -162,6 +164,7 @@ func _discard_world() -> void:
 
 func _new_run(mode: String = "", contracts: Variant = null, legacy: bool = false) -> void:
 	hud.encounter_log_open = false
+	hud.details_open = false
 	if run != null and run.changed.is_connected(_refresh):
 		run.changed.disconnect(_refresh)
 	_discard_world()
@@ -191,19 +194,51 @@ func _confirm_start() -> void:
 
 func _refresh() -> void:
 	if tutorial != null: return
+	_sync_music()
 	if world == null or run == null:
 		return
+	if run.phase != RunModel.Phase.PLAYING or hud.encounter_log_open: hud.details_open = false
 	run.trait_shop_open = router.route == "range" and hud.encounter_log_open and run.phase == RunModel.Phase.PLAYING
-	world.ui_blocked = run.phase != RunModel.Phase.PLAYING or router.route != "range" or hud.encounter_log_open
-	if router.route == "range": get_tree().paused = run.phase in [RunModel.Phase.SHOP, RunModel.Phase.CHOICE, RunModel.Phase.SUPPLY] or hud.encounter_log_open
+	world.ui_blocked = run.phase != RunModel.Phase.PLAYING or router.route != "range" or hud.encounter_log_open or hud.details_open
+	if router.route == "range": get_tree().paused = run.phase in [RunModel.Phase.SHOP, RunModel.Phase.CHOICE, RunModel.Phase.SUPPLY] or hud.encounter_log_open or hud.details_open
 	hud.refresh(run, session.profile, audio.muted, save_notice)
+
+func _sync_music() -> void:
+	if audio == null or router == null or tutorial != null: return
+	match router.route:
+		"home": audio.play_music("menu")
+		"hub", "talents", "active_skills", "cosmetics", "leaderboard", "contracts": audio.play_music("camp")
+		"range":
+			var fighting: bool = run != null and run.phase == RunModel.Phase.PLAYING and not hud.encounter_log_open
+			audio.play_music("battle" if fighting else "camp")
+		# Settings and pause retain the music of the page that opened them.
 
 func _on_action(id: String, value: Variant) -> void:
 	match id:
 		"start": _confirm_start()
 		"resume_hub":
 			if session.has_active_run(): _navigate("hub")
-		"home", "hub", "range", "settings", "tutorial", "talents", "cosmetics", "pause", "leaderboard", "contracts": _navigate(id)
+		"home", "hub", "range", "settings", "tutorial", "talents", "active_skills", "cosmetics", "pause", "leaderboard", "contracts": _navigate(id)
+		"active_unlock", "active_equip":
+			if router.route != "active_skills": return
+			var success: bool = session.unlock_active(str(value)) if id == "active_unlock" else session.equip_active(str(value))
+			if success:
+				audio.play("coin")
+				_save_checkpoint()
+				router.show_page("active_skills", session, save_notice)
+		"combat_details", "combat_help":
+			if router.route != "range" or run == null or run.phase != RunModel.Phase.PLAYING or hud.encounter_log_open: return
+			var show_help: bool = id == "combat_help"
+			hud.details_open = not hud.details_open or hud.details_help != show_help
+			hud.details_help = show_help
+			world.dragging = false
+			world.pull = 0.0
+			_refresh()
+		"details_close":
+			hud.details_open = false
+			_refresh()
+		"active_cast":
+			if router.route == "range" and tutorial == null and world != null and world.activate_skill(): _save_checkpoint()
 		"back":
 			if tutorial != null: _stop_tutorial()
 			else: _navigate(router.back_destination())
@@ -310,11 +345,15 @@ func _settle_shot(shot_id: int, hits: Array) -> void:
 	var previous_level: int = session.profile.level
 	var previous_shots: int = run.shots_left
 	var previous_bosses: int = run.bosses_defeated
+	var previous_gold: int = run.gold
+	var previous_score: float = run.defeat_score
 	session.settle_shot(shot_id, hits)
+	if run.gold > previous_gold or run.defeat_score > previous_score:
+		world.add_caption({"position": Vector2(200, 294), "text": "+%d 金币  +%s 得分" % [run.gold - previous_gold, GameUI.score_text(run.defeat_score - previous_score)], "life": 1.3, "color": Color("edc879")})
 	if run.shots_left > previous_shots:
-		world.labels.append({"position": ArcheryWorld.BOW + Vector2(-15, -38), "text": "+%d 拉弓" % (run.shots_left - previous_shots), "life": 1.5, "color": Color("8fd9ba")})
+		world.add_caption({"position": ArcheryWorld.BOW + Vector2(-15, -38), "text": "+%d 拉弓" % (run.shots_left - previous_shots), "life": 1.5, "color": Color("8fd9ba")})
 	if run.bosses_defeated > previous_bosses:
-		world.labels.append({"position": Vector2(314, 114), "text": "Boss 胜利 · 战利品已入账", "life": 2.0, "color": Color("ffdc83")})
+		world.add_caption({"position": Vector2(314, 114), "text": "Boss 胜利 · 战利品已入账", "life": 2.0, "color": Color("ffdc83")})
 		audio.play("boss_victory")
 	if session.profile.level > previous_level or run.shots_left > previous_shots:
 		audio.play("coin", 1.25)
@@ -349,6 +388,8 @@ func _save_checkpoint() -> void:
 		session.capture_checkpoint(world.snapshot())
 	if not saves.write(session.save_payload()):
 		save_notice = saves.last_error
+	else:
+		save_notice = saves.migration_notice
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo:
@@ -357,7 +398,9 @@ func _unhandled_input(event: InputEvent) -> void:
 				match router.route:
 					"tutorial": tutorial.toggle_pause()
 					"range":
-						if hud.encounter_log_open:
+						if hud.details_open:
+							_on_action("details_close", null)
+						elif hud.encounter_log_open:
 							hud.encounter_log_open = false
 							_refresh()
 						else: _navigate("pause")
@@ -369,10 +412,14 @@ func _unhandled_input(event: InputEvent) -> void:
 				debug_visible = not debug_visible
 				hud.debug_label.visible = debug_visible
 			KEY_M: _toggle_mute()
+			KEY_Q: _on_action("active_cast", null)
+			KEY_R: _on_action("combat_details", null)
+			KEY_F1: _on_action("combat_help", null)
 
 func _process(_delta: float) -> void:
 	if world != null and tutorial == null:
 		hud.update_availability(run, world.is_settled())
+		hud.update_active(run, router.route == "range" and world.can_activate_skill())
 		hud.update_boss(run, world)
 	if debug_visible and world != null:
 		hud.debug_label.text = "FPS %d · 在场箭矢 %d\n拉力 %.0f%% · 装填 %.2fs\n永久等级 %d · 天赋点 %d" % [Engine.get_frames_per_second(), world.arrows.size(), world.pull * 100, world.reload_left, session.profile.level, session.profile.talent_points]

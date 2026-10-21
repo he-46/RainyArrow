@@ -1,0 +1,31 @@
+{
+  "revision": 3,
+  "accepted_original_tracks": [
+    "01_menu_moonlit_bow",
+    "03_ref_campfire_letters"
+  ],
+  "soundfont_sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+  "tracks": [
+    {
+      "id": "D_focused_battle",
+      "title": "临阵",
+      "file": "D_focused_battle.ogg",
+      "bpm": 96,
+      "bars": 32,
+      "style": "低弦稳定脉冲、长音弦乐、稀疏圆号与低鼓；克制、严肃的战斗底乐",
+      "duration_seconds": 80.0,
+      "loop": true,
+      "loop_start": 0,
+      "loop_end": 3528000,
+      "integrated_lufs": -18.99,
+      "true_peak_dbtp": -6.82,
+      "loop_boundary_delta": 0.0020751953125,
+      "sample_delta_p999": 0.024566650390625,
+      "notes": 199,
+      "lead_notes": 11,
+      "source_theme": "new original composition",
+      "renderer": "FluidSynth 2.6.1",
+      "soundfont": "GeneralUser GS 2.0.3"
+    }
+  ]
+}

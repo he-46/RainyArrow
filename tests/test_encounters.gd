@@ -239,7 +239,7 @@ func _paused_flight(tree: SceneTree) -> void:
 	pick.pressed.emit()
 	verify(not tree.paused and main.run.stats.arrow_count == 2 and main.world.arrows[0].stats.to_dict() == old_stats, "real card selection resumes original arrow, applying new stats to future shots")
 	main._on_action("encounter_pick", {"id": "second_wind", "offer_id": token})
-	verify(main.run.encounter_picks.size() == 1 and main.run.shots_left == 8, "stale selection cannot add a second reward")
+	verify(main.run.encounter_picks.size() == 1 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 2, "stale selection cannot add a second reward")
 	var selected_payload: Dictionary = main.saves.read()
 	verify(selected_payload["run"]["encounter_picks"]["rainfall"] == 1 and selected_payload["world"]["arrows"].size() == 1, "selection and untouched live arrow persist together")
 	main._on_action("encounters", null)

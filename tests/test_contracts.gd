@@ -51,7 +51,7 @@ func _values_and_economy() -> void:
 		all[item.id] = 2
 	var session := GameSession.new()
 	var run: RunModel = session.start_run(false, "hell", all)
-	verify(run.challenge.risk == 16 and run.initial_shots == 6 and run.artifact_capacity == 4 and run.supply_remaining() == 0, "max contract resource limits")
+	verify(run.challenge.risk == 16 and run.initial_shots == 12 and run.artifact_capacity == 4 and run.supply_remaining() == 0, "max contract resource limits")
 	verify(run.mode_parameters == {"target_health": 1.5, "boss_health": 2.0, "score": 1.0, "health_growth": 0.06}, "preset origin does not stack legacy Hell multipliers")
 	var exposed: Dictionary = run.challenge
 	exposed.selection.clear()
@@ -65,7 +65,7 @@ func _values_and_economy() -> void:
 	verify(run.skill_price(skill) == price and run.buy(skill) and run.gold == 100000 - price and run.gold_spending.basic == price, "real basic purchase charges rounded contract price")
 	verify(not run.buy_supply(run.supply_token()), "no purchase through API when supply prohibited")
 	while not run.skill_is_mastery(skill): verify(run.buy(skill), "basic purchases reach mastery under price contract")
-	price = ceili(skill.mastery_price(0) * 1.5)
+	price = ceili(skill.paced_price(0, true) * 1.5)
 	var before_mastery: int = run.gold
 	verify(run.skill_price(skill) == price and run.buy(skill) and run.gold == before_mastery - price and run.gold_spending.mastery == price, "mastery uses same contract price and spending bucket")
 	run.close_skills()
@@ -126,6 +126,12 @@ func _rewards() -> void:
 	verify(store.write(session.save_payload()), "completed contract and ranking save")
 	var restored := GameSession.from_dict(store.read())
 	verify(restored.profile.leaderboard.entries[0].challenge == run.challenge, "ranking metadata survives JSON")
+	verify(restored.last_run_summary.challenge == run.challenge, "terminal summary uses canonical contract numeric types")
+	verify(store.write(restored.save_payload()), "completed contract can be saved again after disk reload")
+	restored.return_to_lobby()
+	restored.profile.unlock_active("sunshot")
+	restored.capture_checkpoint(restored.world_snapshot)
+	verify(store.write(restored.save_payload()) and GameSession.from_dict(store.read()).profile.equipped_active == "sunshot", "post-completion permanent edits persist before starting another adventure")
 	restored.end_run("abandoned")
 	verify(restored.profile.leaderboard.entries.size() == 1, "continued terminal run does not duplicate rank")
 	var early := GameSession.new()

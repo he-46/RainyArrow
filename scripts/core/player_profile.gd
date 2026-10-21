@@ -13,13 +13,15 @@ var level: int = 1
 var earned_talent_points: int = 0
 var talents: Dictionary = {}
 var talent_spending: Dictionary = {}
+var active_unlocks: Dictionary = {} # First skill costs 0; others cost 2 talent points.
+var equipped_active: String = ""
 var unlocked_cosmetics: Array[String] = DEFAULT_COSMETICS.duplicate()
 var equipped_cosmetics: Dictionary = {"bow": "bow_default", "arrow": "arrow_default", "archer": "archer_default"}
 var tutorial_completed: bool = false
 var leaderboard: Leaderboard = Leaderboard.new()
 var settings: Dictionary = {
 	"muted": false, "master_volume": 1.0, "music_volume": 0.7,
-	"sfx_volume": 1.0, "fullscreen": false, "screen_shake": true, "trajectory_guide": true,
+	"sfx_volume": 1.0, "fullscreen": false, "screen_shake": true, "trajectory_guide": true, "reduced_effects": false,
 }
 
 var talent_points: int:
@@ -27,6 +29,7 @@ var talent_points: int:
 		var spent: int = 0
 		for cost: Variant in talent_spending.values():
 			spent += int(cost)
+		for cost: Variant in active_unlocks.values(): spent += int(cost)
 		return maxi(0, earned_talent_points - spent)
 
 func record_defeat(points: float) -> void:
@@ -64,11 +67,29 @@ func reset_talents() -> int:
 	var refund: int = earned_talent_points - talent_points
 	talents.clear()
 	talent_spending.clear()
+	active_unlocks.clear()
+	equipped_active = ""
 	changed.emit()
 	return refund
 
+func unlock_active(id: String) -> bool:
+	if not ActiveAbility.ALL.has(id) or active_unlocks.has(id): return false
+	var cost: int = 0 if active_unlocks.is_empty() else ActiveAbility.UNLOCK_COST
+	if talent_points < cost: return false
+	active_unlocks[id] = cost
+	if equipped_active.is_empty(): equipped_active = id
+	changed.emit()
+	return true
+
+func equip_active(id: String) -> bool:
+	if not active_unlocks.has(id) or equipped_active == id: return false
+	equipped_active = id
+	changed.emit()
+	return true
+
 func to_dict() -> Dictionary:
 	return {
+		"active_schema": 1, "active_unlocks": active_unlocks.duplicate(), "equipped_active": equipped_active,
 		"leaderboard_schema": 1, "leaderboard": leaderboard.entries,
 		"total_score": total_score, "total_defeats": total_defeats,
 		"talents": talents.duplicate(true), "talent_spending": talent_spending.duplicate(true),
@@ -126,6 +147,17 @@ static func from_dict(data: Dictionary) -> PlayerProfile:
 			result.talents[key] = rank
 			result.talent_spending[key] = cost
 	result.refresh_cosmetics()
+	var active_data: Variant = data.get("active_unlocks", {})
+	if active_data is Dictionary:
+		# Restore the free choice first so dictionary order cannot change entitlement.
+		for price: int in [0, ActiveAbility.UNLOCK_COST]:
+			for id: String in ActiveAbility.ALL:
+				if not active_data.has(id) or active_data[id] != price: continue
+				if price == 0 and not result.active_unlocks.is_empty(): continue
+				if price > 0 and (result.active_unlocks.is_empty() or result.talent_points < price): continue
+				result.active_unlocks[id] = price
+	var active_id: String = str(data.get("equipped_active", ""))
+	if result.active_unlocks.has(active_id): result.equipped_active = active_id
 	var equipped: Dictionary = data.get("equipped_cosmetics", {})
 	for slot: String in ["bow", "arrow", "archer"]:
 		var id: String = str(equipped.get(slot, result.equipped_cosmetics[slot]))

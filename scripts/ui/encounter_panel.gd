@@ -36,7 +36,8 @@ func _choices(panel: Panel, run: RunModel) -> void:
 		var card: Panel = GameUI.panel(panel, Rect2(x, 124, 316, 238))
 		card.add_theme_stylebox_override("panel", GameUI.box(Color("1e3439"), reward.color))
 		_text(card, "Boss · 免费强化" if not reward.upgrade_trait.is_empty() else ("神器 · 含代价" if reward.has_debuff else ("神器 · 本局唯一" if reward.is_trait else "普通 · %s · 无负面" % reward.category_label())), Vector2(20, 15), 14, reward.color)
-		_text(card, reward.title, Vector2(20, 44), 26, GameUI.CREAM)
+		BuildIcon.artifact(card, reward.id, Vector2(20, 45), 32, reward.color)
+		_text(card, reward.title, Vector2(64, 46), 22, GameUI.CREAM)
 		var description := Label.new()
 		description.name = "Description"
 		description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -61,6 +62,7 @@ func _choices(panel: Panel, run: RunModel) -> void:
 		if reward.is_trait and run.backpack_full(): button.text = "替换神器  " + reward.title
 		button.name = reward.id.replace("/", "_")
 		button.disabled = not run.encounter_has_gain(reward)
+		GameUI.card_state(button, false, not button.disabled, reward.color)
 		if button.disabled: button.text = "已达上限  " + reward.title
 		choice_buttons.append(button)
 	if count == 0:
@@ -125,7 +127,7 @@ func _history(panel: Panel, run: RunModel) -> void:
 			if old != null: GameUI.label(rows, old.title, 17)
 	_button(panel, "回到靶场  →", Rect2(704, 524, 312, 52), func() -> void: action.emit("encounter_close", null)).name = "CloseBackpack"
 	_text(panel, "仅本局有效 · 丢弃不退金币、不再出现", Vector2(34, 532), 14, GameUI.MUTED)
-	_text(panel, "在途箭保留原效果 · 悬停卡片查看说明", Vector2(34, 558), 14, GameUI.MUTED)
+	_text(panel, "在途箭保留原效果 · 点击卡片右上角查看详情", Vector2(34, 558), 14, GameUI.MUTED)
 
 func _artifact_grid(parent: Control, run: RunModel, incoming: String = "", offer_id: int = -1) -> void:
 	var grid := GridContainer.new()
@@ -141,7 +143,8 @@ func _artifact_grid(parent: Control, run: RunModel, incoming: String = "", offer
 		card.custom_minimum_size = Vector2(312, 178)
 		card.name = "Slot%d" % index
 		if index >= owned.size():
-			_text(card, "%02d   空槽位" % (index + 1), Vector2(16, 16), 20, GameUI.MUTED)
+			BuildIcon.add_to(card, "slots", Vector2(14, 14), 30, Color("617770"))
+			_text(card, "%02d   空槽位" % (index + 1), Vector2(56, 16), 20, GameUI.MUTED)
 			_text(card, "奇遇中的神器会装备到这里", Vector2(16, 67), 16, GameUI.MUTED)
 			continue
 		var id: String = owned[index]
@@ -149,11 +152,18 @@ func _artifact_grid(parent: Control, run: RunModel, incoming: String = "", offer
 		var config: TraitUpgradeData = TraitUpgradeCatalog.find(id)
 		var rank: int = run.trait_rank(id)
 		card.add_theme_stylebox_override("panel", GameUI.box(Color("1e3439"), reward.color))
-		_text(card, "%02d   %s" % [index + 1, reward.title], Vector2(14, 10), 20, reward.color)
-		_text(card, "强化 %d/%d%s" % [rank, config.max_level, " · 含代价" if reward.has_debuff else ""], Vector2(14, 39), 14, GameUI.MUTED)
-		var detail: Label = _text(card, run.trait_parameters(id), Vector2(14, 62), 14)
+		BuildIcon.artifact(card, id, Vector2(14, 12), 32, reward.color)
+		_text(card, reward.title, Vector2(56, 10), 20, reward.color)
+		_text(card, "强化 %d/%d%s" % [rank, config.max_level, " · 含代价" if reward.has_debuff else ""], Vector2(56, 39), 14, GameUI.GOLD if reward.has_debuff else GameUI.MUTED)
+		var info: Button = _button(card, "…", Rect2(268, 10, 28, 28), func() -> void: _show_details(run, id))
+		info.custom_minimum_size = Vector2(28, 28)
+		info.size = Vector2(28, 28)
+		info.name = "Details_" + id
+		info.tooltip_text = "神器详情 · 效果、代价与下阶比较"
+		_text(card, BuildIcon.ARTIFACT_COPY.get(id, reward.description), Vector2(14, 63), 14)
+		var detail: Label = _text(card, run.trait_parameters(id), Vector2(14, 88), 13, GameUI.MUTED)
 		detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		detail.size = Vector2(282, 61)
+		detail.size = Vector2(282, 33)
 		detail.clip_text = true
 		card.tooltip_text = reward.description + "\n当前：" + run.trait_parameters(id) + "\n下一阶：" + run.trait_comparison(id)
 		if not incoming.is_empty():
@@ -167,6 +177,7 @@ func _artifact_grid(parent: Control, run: RunModel, incoming: String = "", offer
 		upgrade.name = "Upgrade_" + id
 		upgrade.add_theme_font_size_override("font_size", 15)
 		upgrade.disabled = not run.can_buy_trait(id, rank)
+		GameUI.card_state(upgrade, false, not upgrade.disabled, reward.color)
 		if rank >= config.max_level: upgrade.text = "强化满阶"
 		elif not run.trait_has_gain(id): upgrade.text = "当前无额外收益"
 		elif run.gold < run.trait_price(id, rank): upgrade.text = "金币不足 · %d" % run.trait_price(id, rank)
@@ -176,6 +187,40 @@ func _artifact_grid(parent: Control, run: RunModel, incoming: String = "", offer
 		discard.add_theme_font_size_override("font_size", 15)
 		discard.disabled = not run.can_discard_artifact(id, revision)
 		discard.tooltip_text = run.artifact_removal_blocker(id) if discard.disabled else "丢弃神器及其全部强化；不退还金币"
+
+func _show_details(run: RunModel, id: String) -> void:
+	if has_node("ArtifactDetails"): return
+	var shade := ColorRect.new()
+	shade.name = "ArtifactDetails"
+	shade.color = Color(0.02, 0.04, 0.05, 0.96)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(shade)
+	var panel: Panel = GameUI.panel(shade, Rect2(248, 100, 784, 520))
+	var reward: EncounterData = EncounterCatalog.find(id)
+	BuildIcon.artifact(panel, id, Vector2(26, 24), 44, reward.color)
+	_text(panel, reward.title + " · 强化 %d/%d" % [run.trait_rank(id), TraitUpgradeCatalog.find(id).max_level], Vector2(88, 24), 27, reward.color)
+	_text(panel, "含代价 · 请同时考虑损失与收益" if reward.has_debuff else "本局唯一 · 强化不会额外占用槽位", Vector2(88, 65), 16, GameUI.GOLD if reward.has_debuff else GameUI.MUTED)
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(28, 108)
+	scroll.size = Vector2(728, 320)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll)
+	var content := VBoxContainer.new()
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 14)
+	scroll.add_child(content)
+	_history_line(content, "核心效果", 20, GameUI.GOLD)
+	_history_line(content, run.encounter_description(reward), 18, GameUI.CREAM)
+	_history_line(content, "当前参数", 20, GameUI.GOLD)
+	_history_line(content, run.trait_parameters(id), 17, GameUI.CREAM)
+	_history_line(content, "已达最高强化阶数" if run.trait_rank(id) >= TraitUpgradeCatalog.find(id).max_level else "下一阶 · %d 金币" % run.trait_price(id, run.trait_rank(id)), 20, GameUI.GOLD)
+	if run.trait_rank(id) < TraitUpgradeCatalog.find(id).max_level:
+		_history_line(content, run.trait_comparison(id), 17, Color("a4d9c2"))
+		_history_line(content, run.trait_parameters(id, true), 16, GameUI.MUTED)
+	_history_line(content, "丢弃不退金币，本局不再出现；在途箭保留发射时的效果。", 16, GameUI.MUTED)
+	var close: Button = _button(panel, "返回背包", Rect2(28, 448, 728, 48), func() -> void: shade.queue_free())
+	close.name = "CloseArtifactDetails"
+	close.grab_focus()
 
 func _request_pick(panel: Panel, run: RunModel, id: String, offer_id: int) -> void:
 	if not EncounterCatalog.find(id).is_trait or not run.backpack_full():

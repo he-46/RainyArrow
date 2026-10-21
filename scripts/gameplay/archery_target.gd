@@ -78,7 +78,7 @@ func receive_hit(stats: BowStats, pull: float, point: Vector2, roll: float) -> D
 func is_bullseye(point: Vector2) -> bool:
 	return absf(point.y - global_position.y) <= definition.radius * 0.26 * global_scale.y * float(difficulty_parameters.get("bullseye_scale", 1.0))
 
-func receive_area(damage: float, penetration: int) -> Dictionary:
+func receive_area(damage: float, penetration: int, _shot_id: int = 0) -> Dictionary:
 	if hp <= 0.0: return {}
 	var shot := BowStats.new()
 	shot.damage = damage
@@ -98,6 +98,7 @@ func apply_hit(result: Dictionary) -> Dictionary:
 	result["reward_gold"] = reward_gold if hp <= 0.0 else 0.0
 	flash = 1.0
 	if hp <= 0.0:
+		TargetBreakup.spawn_from(self)
 		respawn_left = RULES.respawn_seconds
 		set_deferred("collision_layer", 0)
 	queue_redraw()
@@ -110,7 +111,7 @@ func collision_volumes() -> Array[Dictionary]:
 func contact_armor(_point: Vector2, _part: String) -> int:
 	return armor
 
-func receive_contact(stats: BowStats, pull: float, point: Vector2, roll: float, _part: String) -> Dictionary:
+func receive_contact(stats: BowStats, pull: float, point: Vector2, roll: float, _part: String, _shot_id: int = 0) -> Dictionary:
 	return receive_hit(stats, pull, point, roll)
 
 func snapshot() -> Dictionary:
@@ -141,26 +142,5 @@ func restore(data: Dictionary) -> void:
 		collision_layer = 0
 
 func _draw() -> void:
-	if definition == null:
-		return
-	var r: float = definition.radius
-	draw_rect(Rect2(-2, r, 4, (310.0 - position.y) / scale.y - r), Color("364349"))
-	draw_rect(Rect2(-8, (308.0 - position.y) / scale.y, 16, 3), Color("52605b"))
-	if hp <= 0.0:
-		draw_rect(Rect2(-5, -r, 10, r * 2), Color(0.2, 0.3, 0.3, 0.25), false)
-		return
-	var tint: Color = definition.color.lerp(Color("fff2ce"), flash)
-	draw_rect(Rect2(-8, -r - 2, 18, r * 2 + 4), Color("14242b"))
-	draw_rect(Rect2(-7, -r, 14, r * 2), tint)
-	draw_rect(Rect2(-8, -r * 0.62, 12, r * 1.24), Color("ecd3a0"))
-	var center_scale: float = float(difficulty_parameters.get("bullseye_scale", 1.0))
-	draw_rect(Rect2(-9, -r * 0.26 * center_scale, 10, r * 0.52 * center_scale), Color("d75b45"))
-	draw_rect(Rect2(-10, -2, 9, 4), Color("ffdd84"))
-	# Keep combat annotations readable at any talent size and below the HUD.
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE / scale)
-	var bar_width: float = 25.0 * sqrt(scale.x)
-	var bar_y: float = -r * scale.y - 6.0
-	draw_rect(Rect2(-bar_width * 0.5, bar_y, bar_width, 3), Color("1b3036"))
-	draw_rect(Rect2(-bar_width * 0.5, bar_y, bar_width * hp / max_hp, 3), Color("8dbb9c"))
-	if armor > 0:
-		draw_string(ThemeDB.fallback_font, Vector2(7.0 * scale.x + 3, -r * scale.y + 10), "A %d" % armor, HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("9fc7db"))
+	if definition == null or collider == null: return
+	TargetArt.ordinary(self, self)

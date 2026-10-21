@@ -2,7 +2,7 @@ class_name SaveStore
 extends RefCounted
 ## Versioned profile+run transaction, legacy import and previous-good recovery.
 
-const VERSION: int = 22
+const VERSION: int = 26
 const DEFAULT_PATH: String = "user://save.json"
 var path: String
 var last_error: String = ""
@@ -24,6 +24,12 @@ func write(payload: Dictionary) -> bool:
 		return false
 	if not _valid_payload(payload):
 		last_error = "存档结构无效，未写入。"
+		return false
+	if payload.run != null and not payload.run.has("balance_revision"):
+		last_error = "成长规则版本缺失，未写入。"
+		return false
+	if int(payload.profile.get("active_schema", 0)) != 1 or (payload.run != null and int(payload.run.get("active_schema", 0)) != 1):
+		last_error = "主动技能状态缺失，未写入。"
 		return false
 	if int(payload["profile"].get("leaderboard_schema", 0)) != 1 or (payload["run"] != null and int(payload["run"].get("ranking_schema", 0)) != 1):
 		last_error = "排行榜状态缺失，未写入。"
@@ -158,8 +164,9 @@ func _migrate_previous(source: String, payload: Dictionary, version: int) -> Dic
 		for key: String in ["ranking_processed", "rank_at_finish", "ended_at"]: legacy.get("last_run_summary", {}).erase(key)
 	if legacy.get("run") is Dictionary and version < 21:
 		for key: String in ["backpack_schema", "artifact_capacity", "artifact_revision", "discarded_artifacts"]: legacy["run"].erase(key)
-	if legacy.get("run") is Dictionary:
+	if legacy.get("run") is Dictionary and version < 22:
 		for key: String in ["challenge_schema", "challenge", "contract_stage_base_score", "contract_stage_bonus_earned"]: legacy["run"].erase(key)
+	if legacy.get("run") is Dictionary and version < 24: legacy["run"]["balance_revision"] = 0
 	var session: GameSession = GameSession.from_dict(legacy)
 	session.migration["source_version"] = version
 	session.migration["legacy_progress"] = "continuous_converted"
@@ -167,6 +174,10 @@ func _migrate_previous(source: String, payload: Dictionary, version: int) -> Dic
 	if not write_blocked:
 		write(migrated)
 	migration_notice = "存档已备份升级：保留构筑、固定选项和在途箭；新奇遇用于后续选择，历史胜利不补发奖励。"
+	if version == 22: migration_notice = "存档已备份升级：挑战词条与当前冒险保持。可在天赋页免费选择首个主动技能，新局生效。"
+	if version == 23: migration_notice = "存档已备份升级：当前局次数、靶子成长和构筑保持；新冒险采用 16 次基础拉弓与渐缓成长。"
+	if version == 24: migration_notice = "存档已备份升级：当前局保持原承伤规则；新冒险中的 Boss 获得韧甲，集中爆发收益递减。"
+	if version == 25: migration_notice = "存档已备份升级：当前局保留原技能收益和价格；新冒险采用伤害分支的渐缓增幅与分段价格。"
 	if version < 10: migration_notice += "旧 Boss 血量按剩余比例扩大三倍，旧静态战保留原机制。"
 	if version == 11: migration_notice = "存档已备份升级：快手搭箭改为箭势渐盛，每层伤害 +5%；已选层数沿用，固定选项、在途箭与当前装填保持。"
 	if version == 15: migration_notice = "存档已备份升级：六类精通从零开始，原基础等级、固定选项、在途母子箭与当前装填保持。"
@@ -195,7 +206,11 @@ func _read_envelope(file_path: String) -> Dictionary:
 	return parsed
 
 func _valid_envelope(envelope: Dictionary) -> bool:
-	if int(envelope.get("version", -1)) not in [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, VERSION] or not _valid_payload(envelope.get("payload")): return false
+	if int(envelope.get("version", -1)) not in [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, VERSION] or not _valid_payload(envelope.get("payload")): return false
+	if int(envelope["version"]) >= 24 and envelope.payload.run != null and not envelope.payload.run.has("balance_revision"): return false
+	if int(envelope["version"]) >= 23:
+		if int(envelope.payload.profile.get("active_schema", 0)) != 1: return false
+		if envelope.payload.run != null and int(envelope.payload.run.get("active_schema", 0)) != 1: return false
 	if int(envelope["version"]) >= 22 and envelope["payload"]["run"] != null and int(envelope["payload"]["run"].get("challenge_schema", 0)) != 1: return false
 	if int(envelope["version"]) >= 21 and envelope["payload"]["run"] != null and int(envelope["payload"]["run"].get("backpack_schema", 0)) != 1: return false
 	if int(envelope["version"]) >= 20:
@@ -237,6 +252,7 @@ func _valid_payload(value: Variant) -> bool:
 		if not data.get(key, {}) is Dictionary:
 			return false
 	var profile: Dictionary = data["profile"]
+	if not _valid_active_profile(profile): return false
 	if not _valid_leaderboard(profile) or not _valid_ranking(data): return false
 	for key: String in ["total_score", "total_defeats"]:
 		if not _is_number(profile.get(key)):
@@ -257,9 +273,24 @@ func _valid_payload(value: Variant) -> bool:
 	if bool(data["run"].get("boss_active", false)):
 		var boss: Variant = data["world"].get("boss")
 		if not boss is Dictionary or int(boss["round_number"]) != int(data["run"]["boss_round"]) or not data["world"].get("targets", []).is_empty(): return false
+		var expected_impact: int = 1 if int(data["run"].get("balance_revision", 0)) >= 2 else 0
+		if int(boss.get("impact_revision", 0)) != expected_impact: return false
 		if data["run"].get("credited_defeats", {}).has("boss%d" % int(boss["round_number"])) and float(boss["hp"]) != 0: return false
 	elif data["world"].get("boss") != null: return false
 	return true
+
+func _valid_active_profile(profile: Dictionary) -> bool:
+	if not _integer_range(profile.get("active_schema", 0), 0, 1): return false
+	if int(profile.get("active_schema", 0)) == 0: return true
+	if not profile.get("active_unlocks") is Dictionary or not profile.get("equipped_active") is String: return false
+	var free: int = 0
+	for id: Variant in profile.active_unlocks:
+		if not id is String or not ActiveAbility.ALL.has(id): return false
+		if not _integer_range(profile.active_unlocks[id], 0, ActiveAbility.UNLOCK_COST): return false
+		if int(profile.active_unlocks[id]) == 0: free += 1
+		elif int(profile.active_unlocks[id]) != ActiveAbility.UNLOCK_COST: return false
+	if not profile.active_unlocks.is_empty() and free != 1: return false
+	return profile.equipped_active.is_empty() or profile.active_unlocks.has(profile.equipped_active)
 
 func _valid_leaderboard(profile: Dictionary) -> bool:
 	if not _integer_range(profile.get("leaderboard_schema", 0), 0, 1): return false
@@ -329,6 +360,7 @@ func _valid_world(value: Variant) -> bool:
 		if not hits is Array: return false
 		for hit: Variant in hits:
 			if not hit is Dictionary: return false
+			if not hit.get("energy_eligible", false) is bool: return false
 			for field: String in ["effective", "reward_score", "reward_gold"]:
 				if not _is_number(hit.get(field)) or float(hit[field]) < 0: return false
 			for field: String in ["hit_id", "event_id"]:
@@ -355,6 +387,11 @@ func _valid_world(value: Variant) -> bool:
 	for arrow: Variant in world.get("arrows", []):
 		if not arrow is Dictionary or not _vector(arrow.get("position")) or not _vector(arrow.get("velocity")):
 			return false
+		if not arrow.get("active_effect", "") is String or not arrow.get("active_target", "") is String: return false
+		if arrow.get("active_effect", "") != "" and not ActiveAbility.ALL.has(arrow.active_effect): return false
+		if arrow.get("active_effect", "") == "hunters_mark":
+			if arrow.get("active_target", "").is_empty() or arrow.active_target.length() >= 80: return false
+		elif not arrow.get("active_target", "").is_empty(): return false
 		if not arrow.get("stats") is Dictionary or not arrow.get("hit_slots") is Array:
 			return false
 		if arrow.has("combat_schema") and not _valid_arrow_combat(arrow): return false
@@ -408,6 +445,14 @@ func _valid_world(value: Variant) -> bool:
 			if not _is_number(boss.get(key)) or float(boss[key]) < 0: return false
 		if float(boss["max_hp"]) <= 0 or float(boss["hp"]) > float(boss["max_hp"]) or float(boss["target_scale"]) != 1: return false
 		if boss.has("combat_schema") and not _valid_boss_combat(boss): return false
+		if not _integer_range(boss.get("impact_revision", 0), 0, 1): return false
+		if int(boss.get("impact_revision", 0)) == 1 and (not boss.has("volley_pressure") or int(boss.get("combat_schema", 0)) != 1): return false
+		var pressure: Variant = boss.get("volley_pressure", {})
+		if not pressure is Dictionary: return false
+		if int(boss.get("impact_revision", 0)) == 0 and not pressure.is_empty(): return false
+		for key: Variant in pressure:
+			if not key is String or not world.get("projectile_ledger", {}).has(key): return false
+			if not _is_number(pressure[key]) or float(pressure[key]) <= 0.0 or float(pressure[key]) > 1.0e20: return false
 	return true
 
 func _valid_boss_combat(boss: Dictionary) -> bool:
@@ -486,6 +531,10 @@ func _integer_range(value: Variant, minimum: int, maximum: int) -> bool:
 	return _is_number(value) and float(value) == floorf(float(value)) and float(value) >= minimum and float(value) <= maximum
 
 func _valid_run(data: Dictionary) -> bool:
+	if not _integer_range(data.get("balance_revision", 0), 0, 3): return false
+	if int(data.get("balance_revision", 0)) >= 1 and data.get("challenge", {}).is_empty(): return false
+	if not _integer_range(data.get("active_schema", 0), 0, 1): return false
+	if int(data.get("active_schema", 0)) == 1 and not ActiveAbility.valid(data.get("active")): return false
 	if not _valid_challenge(data) or not _valid_backpack(data) or not _valid_mode(data) or not _valid_economy(data) or not _valid_trait_levels(data) or not _valid_mastery(data): return false
 	if not data.get("offer_exhausted", false) is bool: return false
 	var exhausted: bool = bool(data.get("offer_exhausted", false))

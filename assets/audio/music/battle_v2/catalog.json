@@ -1,0 +1,96 @@
+{
+  "revision": 2,
+  "accepted_original_tracks": [
+    "01_menu_moonlit_bow",
+    "03_ref_campfire_letters"
+  ],
+  "soundfont_sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+  "tracks": [
+    {
+      "id": "A_woodland_marimba",
+      "title": "万箭破晓 · 林野木琴",
+      "style": "马林巴木琴、尼龙吉他、拨奏弦乐、康加鼓；轻巧有弹性",
+      "bpm": 148,
+      "bars": 48,
+      "duration_seconds": 77.83775510204082,
+      "loop": true,
+      "loop_start": 0,
+      "loop_end": 3432645,
+      "integrated_lufs": -16.96,
+      "true_peak_dbtp": -2.86,
+      "loop_boundary_delta": 0.00408935546875,
+      "sample_delta_p999": 0.06732177734375,
+      "notes": 1736,
+      "programs": {
+        "0": 12,
+        "1": 24,
+        "2": 45,
+        "3": 43,
+        "4": 48,
+        "9": 0
+      },
+      "file": "A_woodland_marimba.ogg",
+      "source_theme": "02_battle_rain_of_arrows",
+      "soundfont": "GeneralUser GS 2.0.3",
+      "renderer": "FluidSynth 2.6.1"
+    },
+    {
+      "id": "B_piano_strings",
+      "title": "万箭破晓 · 疾行钢琴",
+      "style": "钢琴、拨奏及长弦乐、大提琴、定音鼓；旋律清楚、有推动感",
+      "bpm": 148,
+      "bars": 48,
+      "duration_seconds": 77.83775510204082,
+      "loop": true,
+      "loop_start": 0,
+      "loop_end": 3432645,
+      "integrated_lufs": -16.97,
+      "true_peak_dbtp": -4.12,
+      "loop_boundary_delta": 0.0120849609375,
+      "sample_delta_p999": 0.0352783203125,
+      "notes": 1302,
+      "programs": {
+        "0": 0,
+        "1": 45,
+        "2": 48,
+        "3": 32,
+        "4": 42,
+        "6": 47,
+        "9": 0
+      },
+      "file": "B_piano_strings.ogg",
+      "source_theme": "02_battle_rain_of_arrows",
+      "soundfont": "GeneralUser GS 2.0.3",
+      "renderer": "FluidSynth 2.6.1"
+    },
+    {
+      "id": "C_horn_wardrums",
+      "title": "万箭破晓 · 远征号角",
+      "style": "圆号、弦乐、大提琴、定音鼓与低战鼓；厚实、有出征感",
+      "bpm": 148,
+      "bars": 48,
+      "duration_seconds": 77.83775510204082,
+      "loop": true,
+      "loop_start": 0,
+      "loop_end": 3432645,
+      "integrated_lufs": -16.96,
+      "true_peak_dbtp": -5.56,
+      "loop_boundary_delta": 0.005584716796875,
+      "sample_delta_p999": 0.031524658203125,
+      "notes": 1630,
+      "programs": {
+        "0": 60,
+        "1": 48,
+        "2": 42,
+        "3": 43,
+        "4": 48,
+        "6": 47,
+        "9": 0
+      },
+      "file": "C_horn_wardrums.ogg",
+      "source_theme": "02_battle_rain_of_arrows",
+      "soundfont": "GeneralUser GS 2.0.3",
+      "renderer": "FluidSynth 2.6.1"
+    }
+  ]
+}

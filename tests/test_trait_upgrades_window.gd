@@ -61,7 +61,8 @@ func _run() -> void:
 	main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	main.capture_path = "trait-upgrades-window-test"
-	main._new_run()
+	# The twelve-artifact fixture represents a migrated pre-contract adventure.
+	main._new_run("normal", null, true)
 	freeze()
 	equip(["piercing_split", "branch_harvest", "branch_ricochet", "charged_breach", "bullseye_wave", "ricochet_haste", "wall_forging", "echo_strike", "piercing_edge", "armor_surplus", "critical_flow", "broad_precision"])
 	main.world.boss_enabled = false

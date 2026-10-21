@@ -43,7 +43,7 @@ func _ready() -> void:
 	complete_panel = GameUI.panel(self, Rect2(230, 252, 820, 352))
 	var heading: Label = GameUI.label(complete_panel, "弓手，准备出发。", 34, GameUI.GOLD)
 	heading.position = Vector2(32, 22)
-	var summary: Label = GameUI.label(complete_panel, "拉弓、靶心、升级、奇遇：你已经完成练习。\n击倒靶子才会获得金币和经验；每 10 次击倒选一次奇遇。\n金币仅供本局使用，等级和天赋会留到下一次冒险。\n\n教程完成已保存，可随时重玩。", 19)
+	var summary: Label = GameUI.label(complete_panel, "拉弓、靶心、升级、奇遇：你已经完成练习。\n击倒靶子才会获得金币和经验；每 10 次击倒选一次奇遇。\n大厅 → 天赋 → 主动技能，可免费选择首个技能。\n射箭积攒能量，战斗按 Q 施放；等待不会恢复能量。\n金币仅供本局使用，等级和天赋会留到下一次冒险。", 19)
 	summary.position = Vector2(32, 90)
 	var back: Button = GameUI.button(complete_panel, "结束练习，返回", func() -> void: action.emit("leave", null))
 	back.position = Vector2(32, 280)
@@ -52,6 +52,13 @@ func _ready() -> void:
 
 func refresh(run: RunModel, profile: PlayerProfile, step: int, paused_by_user: bool, muted: bool, message: String) -> void:
 	hud.refresh(run, profile, muted, "")
+	if run.phase == RunModel.Phase.SHOP:
+		# The shared skill cards are taller since the visual upgrade. Leave a
+		# separate footer for coaching, including the full return-button hitbox.
+		hud.phase_card.position.y = 12
+		hud.phase_card.size.y = 580
+		hud.content.add_theme_constant_override("separation", 1)
+		(hud.content.get_child(2) as GridContainer).add_theme_constant_override("v_separation", 4)
 	hud.pause_button.text = "继续" if paused_by_user else "暂停"
 	hud.skills_button.disabled = step != 2 or paused_by_user
 	hud.encounters_button.disabled = true

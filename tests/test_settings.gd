@@ -23,7 +23,7 @@ func run_all(tree: SceneTree) -> void:
 	tree.root.add_child(main)
 	main._on_action("settings", null)
 	var settings: SettingsPage = main.router.page.get_child(1) as SettingsPage
-	verify(settings != null and settings.sliders.size() == 3 and settings.toggles.size() == 4, "actual settings page has seven options")
+	verify(settings != null and settings.sliders.size() == 3 and settings.toggles.size() == 5 and settings.toggles.has("reduced_effects"), "actual settings page has eight options including reduced effects")
 	for key: String in ["master_volume", "sfx_volume", "music_volume"]:
 		(settings.sliders[key] as HSlider).value = 0.32
 		verify(is_equal_approx(main.session.profile.settings[key], 0.32), "actual slider updates matching setting " + key)

@@ -17,12 +17,16 @@ var arrows: Array[Arrow] = []
 var labels: Array[Dictionary] = []
 var particles: Array[Dictionary] = []
 var area_rings: Array[Dictionary] = []
+var vfx: CombatVFX
+var reduced_effects: bool = false
 var clock: float = 0.0
 var reload_left: float = 0.0
 var dragging: bool = false
 var pull: float = 0.0
 var direction: Vector2 = Vector2(1, -0.2).normalized()
 var recoiling: float = 0.0
+var cast_pose_left: float = 0.0
+var visual_reload_duration: float = 0.65
 var waiting_for_settle: bool = false
 var cosmetic_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var ui_blocked: bool = false
@@ -38,8 +42,18 @@ var projectile_ledger: Dictionary = {} # Per shot: next unique source and total 
 func _ready() -> void:
 	cosmetic_rng.randomize()
 	rest_canvas = get_viewport().canvas_transform
+	add_child(ForestBackdrop.new())
+	vfx = CombatVFX.new()
+	add_child(vfx)
 
 func apply_settings(options: Dictionary) -> void:
+	reduced_effects = bool(options.get("reduced_effects", false))
+	if vfx != null: vfx.configure(reduced_effects)
+	if reduced_effects:
+		particles.clear()
+		area_rings.clear()
+		for child: Node in get_children():
+			if child is TargetBreakup: child.queue_free()
 	trajectory_guide = bool(options["trajectory_guide"])
 	screen_shake = bool(options["screen_shake"])
 	if not screen_shake: reset_shake()
@@ -91,9 +105,15 @@ func build_field(saved: Dictionary = {}) -> void:
 	labels.clear()
 	particles.clear()
 	area_rings.clear()
+	if vfx != null:
+		vfx.events.clear()
+		vfx.queue_redraw()
 	dragging = false
 	waiting_for_settle = run.shots_left <= 0 and not run.is_finished() and run.phase != RunModel.Phase.SUPPLY
 	reload_left = float(saved.get("reload_left", 0.0))
+	visual_reload_duration = maxf(reload_left, run.stats.reload_seconds)
+	cast_pose_left = 0.0
+	recoiling = 0.0
 	waiting_for_settle = waiting_for_settle or bool(saved.get("waiting_for_settle", false))
 	var aim: Array = saved.get("direction", [1.0, -0.2])
 	direction = Vector2(aim[0], aim[1]).normalized()
@@ -148,7 +168,7 @@ func _create_boss(state: Dictionary = {}) -> void:
 	boss.tick(0.0, clock)
 
 func _on_boss_phase(_number: int) -> void:
-	labels.append({"position": Vector2(322, 114), "text": "第二阶段 · 护板启动", "life": 1.4, "color": Color("9fc7db")})
+	add_caption({"position": Vector2(322, 114), "text": "第二阶段 · 护板启动", "life": 1.4, "color": Color("9fc7db")})
 	feedback.emit("boss_phase")
 
 func _advance_boss() -> bool:
@@ -160,19 +180,18 @@ func _advance_boss() -> bool:
 		run.boss_active = false
 		var next_field: Dictionary = {"clock": clock, "direction": [direction.x, direction.y], "reload_left": reload_left, "field_generation": field_generation}
 		build_field(next_field)
-		labels.append({"position": Vector2(348, 138), "text": "BOSS 击败 · 靶场重新开放", "life": 2.0, "color": Color("ffdc83")})
+		add_caption({"position": Vector2(348, 138), "text": "BOSS 击败 · 靶场重新开放", "life": 2.0, "color": Color("ffdc83")})
 	elif run.begin_boss():
 		dragging = false
 		pull = 0.0
 		for target: ArcheryTarget in targets:
 			field_generation = maxi(field_generation, target.generation + 1)
-			for index: int in range(8):
-				particles.append({"position": target.position, "velocity": Vector2(cosmetic_rng.randf_range(-60, 60), cosmetic_rng.randf_range(-70, -10)), "life": 0.6, "color": Color("eabe76")})
+			if target.hp > 0: TargetBreakup.spawn_from(target, true)
 			remove_child(target)
 			target.queue_free()
 		targets.clear()
 		_create_boss()
-		labels.append({"position": Vector2(348, 138), "text": "BOSS · 普通靶已清场", "life": 2.0, "color": Color("ffdc83")})
+		add_caption({"position": Vector2(348, 138), "text": "BOSS · 普通靶已清场", "life": 2.0, "color": Color("ffdc83")})
 		feedback.emit("boss_entry")
 	else: return false
 	run.changed.emit()
@@ -276,6 +295,11 @@ func _update_aim(viewport_position: Vector2) -> void:
 func _physics_process(delta: float) -> void:
 	if run == null or run.suspended or run.phase != RunModel.Phase.PLAYING:
 		return
+	run.active.cooldown = maxf(0.0, run.active.cooldown - delta)
+	if not run.active.target_id.is_empty() and _marked_target() == null:
+		run.active.target_id = ""
+		run.active.remaining = 0
+		run.changed.emit()
 	if run.offer_encounter():
 		volley_settled.emit()
 		return
@@ -306,6 +330,7 @@ func _settle_shots() -> void:
 		var hits: Array = pending_volleys[str(id)]
 		pending_volleys.erase(str(id))
 		projectile_ledger.erase(str(id))
+		if boss != null: boss.volley_pressure.erase(str(id))
 		shot_settled.emit(id, hits)
 
 func _process(delta: float) -> void:
@@ -314,6 +339,7 @@ func _process(delta: float) -> void:
 		if area_rings[index]["life"] <= 0.0: area_rings.remove_at(index)
 	_update_shake(delta)
 	recoiling = maxf(recoiling - delta * 7.0, 0.0)
+	cast_pose_left = maxf(cast_pose_left - delta, 0.0)
 	for index: int in range(labels.size() - 1, -1, -1):
 		labels[index]["life"] -= delta
 		labels[index]["position"] += Vector2(0, -18) * delta
@@ -332,6 +358,8 @@ func _release() -> void:
 	if ui_blocked or (boss_enabled and run.boss_due()) or run.phase != RunModel.Phase.PLAYING or pull < 0.12 or not run.consume_shot():
 		pull = 0.0
 		return
+	var active_effect: Dictionary = run.active.take_shot()
+	if vfx != null and not active_effect.is_empty(): vfx.emit_effect(str(active_effect.id), BOW, direction)
 	for index: int in range(run.stats.arrow_count):
 		var angle: float = deg_to_rad(run.stats.spread_degrees) * (float(index) - float(run.stats.arrow_count - 1) * 0.5)
 		var arrow: Arrow = Arrow.new()
@@ -339,13 +367,52 @@ func _release() -> void:
 		arrow.shot_id = run.shot_sequence
 		arrow.source_id = index
 		arrow.effects = run.projectile_effects()
+		arrow.active_effect = str(active_effect.get("id", ""))
+		arrow.active_target = str(active_effect.get("target", ""))
 		_attach_arrow(arrow)
-	reload_left = run.stats.reload_seconds
+	reload_left = 0.0 if active_effect.get("id", "") == "quickdraw" else run.stats.reload_seconds
+	visual_reload_duration = reload_left
 	waiting_for_settle = true
 	recoiling = 1.0
 	feedback.emit("release", 0.85 + pull * 0.3)
 	pull = 0.0
 	draw_released.emit(run.shot_sequence)
+	run.changed.emit()
+
+func skill_target() -> ArcheryTarget:
+	var best: ArcheryTarget
+	var best_angle: float = 0.38
+	var candidates: Array[ArcheryTarget] = targets.duplicate()
+	if boss != null: candidates.append(boss)
+	for target: ArcheryTarget in candidates:
+		if target.hp <= 0.0: continue
+		var angle: float = absf(direction.angle_to(target.position - BOW))
+		if angle < best_angle:
+			best_angle = angle
+			best = target
+	return best
+
+func _marked_target() -> ArcheryTarget:
+	if boss != null and boss.hp > 0 and boss.defeat_id() == run.active.target_id: return boss
+	for target: ArcheryTarget in targets:
+		if target.hp > 0 and target.defeat_id() == run.active.target_id: return target
+	return null
+
+func can_activate_skill() -> bool:
+	return run != null and not run.suspended and run.phase == RunModel.Phase.PLAYING and not ui_blocked and not get_tree().paused and run.shots_left > 0 and not (boss_enabled and run.boss_due()) and run.active.can_cast() and (run.active.id != "hunters_mark" or skill_target() != null)
+
+func activate_skill() -> bool:
+	if not can_activate_skill(): return false
+	var target: ArcheryTarget = skill_target() if run.active.id == "hunters_mark" else null
+	if not run.active.cast(target.defeat_id() if target != null else ""): return false
+	if run.active.id == "quickdraw": reload_left = 0.0
+	cast_pose_left = 0.28
+	if vfx != null: vfx.emit_effect(run.active.id, target.position if target != null else BOW, direction)
+	add_caption({"position": BOW + Vector2(38, -25), "text": str(ActiveAbility.ALL[run.active.id].title), "life": 1.2, "color": Color("8fd9ba")})
+	feedback.emit("active_skill", 1.0)
+	run.changed.emit()
+	queue_redraw()
+	return true
 
 func _attach_arrow(arrow: Arrow) -> void:
 	arrow.cosmetic = CosmeticCatalog.equipped(appearance, "arrow")
@@ -355,7 +422,7 @@ func _attach_arrow(arrow: Arrow) -> void:
 	projectile_ledger[key]["next_source"] = maxi(int(projectile_ledger[key]["next_source"]), arrow.source_id + 1)
 	arrow.struck.connect(_on_hit.bind(arrow))
 	arrow.expired.connect(_on_arrow_expired)
-	arrow.bounced.connect(_on_bounce)
+	arrow.bounced.connect(_on_bounce.bind(arrow))
 	arrow.split_requested.connect(_on_split)
 	arrow.area_requested.connect(_on_area)
 	add_child(arrow)
@@ -385,11 +452,13 @@ func _on_split(parent: Arrow) -> void:
 		ledger["children"] = int(ledger["children"]) + 1
 		_attach_arrow(child)
 	if count > 0:
-		labels.append({"position": parent.position + Vector2(-12, -24), "text": "分裂", "life": 0.65, "color": Color("b8e395")})
+		add_caption({"position": parent.position + Vector2(-12, -24), "text": "分裂", "life": 0.65, "color": Color("b8e395")})
 
 func _on_area(arrow: Arrow, primary: ArcheryTarget, point: Vector2, damage: float, penetration: int) -> void:
 	var local: Vector2 = to_local(point)
-	area_rings.append({"position": local, "radius": arrow.effects.bullseye_radius, "life": 0.45})
+	if not reduced_effects:
+		if area_rings.size() >= 8: area_rings.pop_front()
+		area_rings.append({"position": local, "radius": arrow.effects.bullseye_radius, "life": 0.45})
 	var count: int = 0
 	for node: Node in get_tree().get_nodes_in_group("archery_targets"):
 		var target := node as ArcheryTarget
@@ -399,7 +468,7 @@ func _on_area(arrow: Arrow, primary: ArcheryTarget, point: Vector2, damage: floa
 		# A Boss is one life, including all body/core aliases; shield is never a victim.
 		if target is ArcheryBoss and (arrow.hit_slots.has(-1) or arrow.hit_slots.has(-3)): continue
 		if count >= arrow.effects.bullseye_targets or arrow.area_slots.size() >= 16: break
-		var hit: Dictionary = target.receive_area(damage, penetration)
+		var hit: Dictionary = target.receive_area(damage, penetration, arrow.shot_id)
 		if hit.is_empty(): continue
 		arrow.area_slots.append(target.slot)
 		for excluded: int in hit.get("excluded_slots", []):
@@ -408,9 +477,13 @@ func _on_area(arrow: Arrow, primary: ArcheryTarget, point: Vector2, damage: floa
 		# Secondary damage bypasses Arrow's crit/exit/split/area trigger pipeline.
 		_on_hit(target, target.global_position, hit, arrow)
 
-func _on_bounce(point: Vector2, _normal: Vector2) -> void:
-	feedback.emit("hit", 1.35)
-	particles.append({"position": to_local(point), "velocity": Vector2(0, -25), "life": 0.3, "color": Color("9fd9da")})
+func _on_bounce(point: Vector2, normal: Vector2, arrow: Arrow = null) -> void:
+	feedback.emit("ricochet", 1.0)
+	if vfx != null: vfx.emit_effect("bounce", to_local(point), arrow.velocity if arrow != null else normal)
+
+func add_caption(record: Dictionary) -> void:
+	if not record.has("important"): record["important"] = true
+	CombatCaptions.append(labels, record)
 
 func _on_arrow_expired(arrow: Arrow) -> void:
 	arrows.erase(arrow)
@@ -419,6 +492,7 @@ func _on_hit(_target: ArcheryTarget, point: Vector2, hit: Dictionary, arrow: Arr
 	_kick_shake(bool(hit["broken"]))
 	# Pending rewards have an explicit schema; presentation-only hit fields stay here.
 	var event: Dictionary = {
+		"energy_eligible": arrow.parent_source_id < 0 and hit.get("damage_kind", "") != "area" and not bool(hit.get("active_boosted", false)),
 		"hit_id": "%d:%d:%s" % [arrow.shot_id, arrow.source_id, hit["event_id"]],
 		"event_id": str(hit["event_id"]), "effective": float(hit["effective"]),
 		"broken": bool(hit["broken"]), "critical": bool(hit["critical"]), "bullseye": bool(hit["bullseye"]),
@@ -433,39 +507,51 @@ func _on_hit(_target: ArcheryTarget, point: Vector2, hit: Dictionary, arrow: Arr
 		event["parent_source_id"] = arrow.parent_source_id
 		event["child_gold_bonus"] = arrow.effects.child_gold_bonus
 	pending_volleys[str(arrow.shot_id)].append(event)
+	if bool(hit["broken"]) and run.active.target_id == _target.defeat_id():
+		run.active.target_id = ""
+		run.active.remaining = 0
+		run.changed.emit()
 	var local: Vector2 = to_local(point)
 	var highlighted: bool = bool(hit["critical"]) or bool(hit["bullseye"])
-	var caption: String = "-%d" % int(round(float(hit["effective"])))
-	if hit["broken"]:
-		caption += "  +%s XP" % GameUI.score_text(hit["reward_score"])
-	if hit["bullseye"]:
-		caption += " ◎"
-	if hit["critical"]:
-		caption += " !"
-	if bool(hit.get("trait_boosted", false)): caption += " 强化"
-	if hit.get("damage_kind", "") == "area": caption += " 回响"
-	if event.has("child_gold_bonus"): caption += " 枝丰"
-	if str(hit.get("boss_part", "")) == "weak": caption += " 弱点"
-	if str(hit.get("boss_part", "")) == "shield":
-		caption = "护板贯穿" if bool(hit["pierced"]) else "护板阻挡"
+	var part: String = str(hit.get("boss_part", "body"))
+	var area: bool = hit.get("damage_kind", "") == "area"
+	var tags: Array[String] = []
+	if hit["critical"]: tags.append("暴击")
+	if hit["bullseye"]: tags.append("靶心")
+	if hit["broken"]: tags.append("击倒")
+	if bool(hit.get("trait_boosted", false)): tags.append("强化")
+	if bool(hit.get("active_boosted", false)): tags.append("战技")
+	if area: tags.append("回响")
+	if event.has("child_gold_bonus"): tags.append("枝丰")
+	if part == "weak": tags.append("弱点")
+	if part == "shield": tags.append("护板贯穿" if hit["pierced"] else "护板阻挡")
 	var caption_position: Vector2 = local + Vector2(-12, -14)
-	if hit.get("damage_kind", "") == "area": caption_position.y -= 18.0
+	if area: caption_position.y -= 18.0
 	if _target is ArcheryBoss: caption_position.x = _target.position.x - RunModel.BOSS_RULES.width * 0.5 - 125.0
-	if str(hit.get("boss_part", "")) == "shield": caption_position.y -= 18.0
-	labels.append({"position": caption_position, "text": caption, "life": 1.0, "color": Color("ffdc83") if highlighted else Color("c8e3ca")})
-	var cue: String = "break" if hit["broken"] else ("bullseye" if highlighted else "hit")
+	if part == "shield": caption_position.y -= 18.0
+	var key: String = "%d:%s:%s:%s" % [arrow.shot_id, _target.defeat_id(), part, area]
+	CombatCaptions.hit(labels, key, caption_position, float(hit["effective"]), tags, highlighted or bool(hit["broken"]))
+	if vfx != null:
+		vfx.emit_effect("iron" if _target.armor > 0 or part == "shield" else "wood", local, arrow.velocity)
+		if hit["bullseye"]: vfx.emit_effect("bullseye", local)
+		if hit["critical"]: vfx.emit_effect("critical", local)
+		if hit["pierced"] and not area: vfx.emit_effect("penetrate", local, arrow.velocity)
+	var cue: String = "break" if hit["broken"] else ("critical" if hit["critical"] else ("bullseye" if hit["bullseye"] else ("metal_hit" if _target.armor > 0 else "hit")))
 	if str(hit.get("boss_part", "")) == "shield": cue = "shield_pass" if bool(hit["pierced"]) else "shield_block"
 	elif str(hit.get("boss_part", "")) == "weak": cue = "boss_weak"
 	feedback.emit(cue, cosmetic_rng.randf_range(0.94, 1.06))
-	for index: int in range(10 if hit["broken"] else 4):
-		particles.append({"position": local, "velocity": Vector2(cosmetic_rng.randf_range(-70, 70), cosmetic_rng.randf_range(-80, -20)), "life": cosmetic_rng.randf_range(0.2, 0.6), "color": Color("eabe76")})
 
 func _draw() -> void:
 	_draw_landscape()
+	if run != null and run.active.id == "hunters_mark":
+		var marked: ArcheryTarget = _marked_target() if not run.active.target_id.is_empty() else skill_target()
+		if marked != null:
+			CombatVFX.marker(self, marked, not run.active.target_id.is_empty())
 	for ring: Dictionary in area_rings:
 		var tint := Color("9fd9da")
 		tint.a = clampf(float(ring["life"]) / 0.45, 0.0, 1.0) * 0.6
-		draw_arc(ring["position"], ring["radius"], 0.0, TAU, 48, tint, 1.0)
+		for segment: PackedVector2Array in CombatVFX.area_outline(ring["position"], ring["radius"]):
+			draw_polyline(segment, tint, 1.0)
 	draw_rect(Arrow.FIELD, Color("395054"), false, 1.0)
 	_draw_bow()
 	if dragging and run != null:
@@ -477,8 +563,8 @@ func _draw() -> void:
 		draw_rect(Rect2(BOW + Vector2(-25, 34), Vector2(50, 3)), Color("283b3c"))
 		draw_rect(Rect2(BOW + Vector2(-25, 34), Vector2(50 * pull, 3)), Color("edc879"))
 	for arrow: Arrow in arrows:
-		for index: int in range(1, arrow.trail.size()):
-			var tint: Color = arrow.cosmetic.secondary
+		for index: int in range(1, mini(arrow.trail.size(), 3 if reduced_effects else 10)):
+			var tint: Color = Color("ffdc83") if arrow.active_effect == "sunshot" else (Color("a8dce5") if arrow.active_effect == "quickdraw" else arrow.cosmetic.secondary)
 			tint.a = 0.25 * (1.0 - float(index) / 10.0)
 			draw_line(arrow.trail[index - 1], arrow.trail[index], tint, 1)
 	for particle: Dictionary in particles:
@@ -486,39 +572,23 @@ func _draw() -> void:
 	for label: Dictionary in labels:
 		var color: Color = label["color"]
 		color.a = minf(1.0, float(label["life"]) * 2.0)
-		draw_string(ThemeDB.fallback_font, label["position"], label["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, color)
+		var font_size: int = int(label.get("font_size", 10))
+		var width: float = ThemeDB.fallback_font.get_string_size(label["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+		var at: Vector2 = label["position"]
+		at.x = clampf(at.x, 12, maxf(12, 628 - width))
+		at.y = clampf(at.y, 66, 302)
+		draw_string(ThemeDB.fallback_font, at, label["text"], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 func _draw_landscape() -> void:
-	draw_rect(Rect2(0, 0, 640, 360), Color("101f2a"))
-	draw_rect(Rect2(0, 105, 640, 205), Color("172b32"))
-	draw_rect(Rect2(0, 180, 640, 130), Color("20383b"))
-	draw_circle(Vector2(508, 89), 24, Color("d6c99c"))
-	draw_rect(Rect2(486, 75, 8, 3), Color("b5b48e"))
-	draw_rect(Rect2(516, 96, 11, 4), Color("b5b48e"))
-	for index: int in range(18):
-		var x: float = float(index * 43 - 17)
-		var height: float = float(66 + (index * 29) % 95)
-		draw_rect(Rect2(x, 270 - height, 9, height), Color("1a3035"))
-		draw_colored_polygon(PackedVector2Array([Vector2(x - 19, 250 - height), Vector2(x + 4, 177 - height), Vector2(x + 28, 250 - height)]), Color("1c3338"))
-	for index: int in range(10):
-		var x: float = float(index * 71 - 30)
-		draw_rect(Rect2(x, 187 + (index * 13) % 45, 7, 118), Color("29413f"))
-	draw_rect(Rect2(0, 308, 640, 5), Color("739078"))
-	draw_rect(Rect2(0, 313, 640, 47), Color("34463d"))
-	draw_rect(Rect2(0, 325, 640, 35), Color("293833"))
-	for index: int in range(80):
-		var x: float = float((index * 79 + 7) % 640)
-		var y: float = float(308 + (index * 17) % 41)
-		draw_rect(Rect2(x, y, 3 + index % 4, 2), Color("52634a"))
-	draw_rect(Rect2(64, 284, 73, 24), Color("374b47"))
-	draw_rect(Rect2(61, 281, 79, 5), Color("819080"))
-	CosmeticDrawing.archer(self, CosmeticCatalog.equipped(appearance, "archer"), Vector2(79, 221))
+	CosmeticDrawing.archer(self, CosmeticCatalog.equipped(appearance, "archer"), BOW - ArcherPose.GRIP, visual_pose())
+
+func visual_pose() -> ArcherPose:
+	return ArcherPose.sample(direction, dragging, pull, reload_left, visual_reload_duration, recoiling, cast_pose_left, clock)
 
 func _draw_bow() -> void:
-	var center: Vector2 = BOW + Vector2(-recoiling * 3.0, 0)
-	CosmeticDrawing.bow(self, CosmeticCatalog.equipped(appearance, "bow"), center, direction, pull)
-	var string_center: Vector2 = center - direction * (pull * 23.0)
-	if reload_left <= 0.0:
-		var skin: CosmeticData = CosmeticCatalog.equipped(appearance, "arrow")
-		draw_line(string_center - direction * 6, string_center + direction * 26, skin.primary, 1)
-		draw_circle(string_center + direction * 26, 2, skin.accent)
+	var pose: ArcherPose = visual_pose()
+	CosmeticDrawing.bow(self, CosmeticCatalog.equipped(appearance, "bow"), BOW, direction, pose.tension, pose.recoil)
+	if run != null and run.active.id == "sunshot" and run.active.remaining > 0 and not reduced_effects:
+		draw_arc(BOW, 7 + pose.tension * 3, -1.1, 1.1, 8, Color("e7c97c"), 1)
+	if pose.loaded and run != null and run.shots_left > 0:
+		CosmeticDrawing.nocked_arrow(self, CosmeticCatalog.equipped(appearance, "arrow"), ArcherPose.string_anchor(BOW, direction, pose.tension), direction, run.stats.arrow_size, run.stats.arrow_count)

@@ -1,0 +1,31 @@
+{
+  "revision": 4,
+  "accepted_original_tracks": [
+    "01_menu_moonlit_bow",
+    "03_ref_campfire_letters"
+  ],
+  "soundfont_sha256": "9575028c7a1f589f5770fccc8cff2734566af40cd26ed836944e9a5152688cfe",
+  "tracks": [
+    {
+      "id": "E_ranger_skirmish",
+      "title": "林间交锋",
+      "file": "E_ranger_skirmish.ogg",
+      "bpm": 126,
+      "bars": 32,
+      "style": "短弦推进、木管短句应答、轻战鼓；游侠交战的敏捷感与紧张感",
+      "duration_seconds": 60.95231292517007,
+      "loop": true,
+      "loop_start": 0,
+      "loop_end": 2687997,
+      "integrated_lufs": -16.97,
+      "true_peak_dbtp": -4.01,
+      "loop_boundary_delta": 0.002471923828125,
+      "sample_delta_p999": 0.04058837890625,
+      "notes": 645,
+      "lead_notes": 73,
+      "source_theme": "new original composition",
+      "renderer": "FluidSynth 2.6.1",
+      "soundfont": "GeneralUser GS 2.0.3"
+    }
+  ]
+}

@@ -19,13 +19,16 @@ func configure(selection: Dictionary, profile: PlayerProfile, locked_run: RunMod
 		preset.position = Vector2(800 + index * 146, 30)
 		preset.size = Vector2(136, 42)
 		preset.disabled = locked
+		GameUI.card_state(preset, picks == ContractCatalog.preset(id), not locked)
 	for index: int in range(ContractCatalog.ALL.size()):
 		var item: Dictionary = ContractCatalog.ALL[index]
 		var rank: int = int(picks.get(item.id, 0))
 		var card: Panel = GameUI.panel(self, Rect2(40 + (index % 2) * 404, 102 + (index / 2) * 130, 392, 120))
 		card.name = "Contract_" + item.id
+		if rank > 0: card.add_theme_stylebox_override("panel", GameUI.box(Color("233a38"), GameUI.GOLD.darkened(0.25)))
+		BuildIcon.add_to(card, BuildIcon.CONTRACTS[item.id], Vector2(14, 10), 30, GameUI.GOLD if rank > 0 else GameUI.MUTED)
 		var heading: Label = GameUI.label(card, item.title + "  ·  " + item.scope, 20, GameUI.GOLD if rank > 0 else GameUI.CREAM)
-		heading.position = Vector2(14, 8)
+		heading.position = Vector2(54, 8)
 		var detail: Label = GameUI.label(card, item.options[rank - 1] if rank > 0 else ("旧版冒险沿用原难度" if legacy else ("本局未启用" if locked else "未启用 · 点击 I / II 查看并选择")), 14, GameUI.MUTED)
 		detail.position = Vector2(14, 40)
 		for level: int in range(3):
@@ -37,17 +40,20 @@ func configure(selection: Dictionary, profile: PlayerProfile, locked_run: RunMod
 			button.size = Vector2(114, 32)
 			button.add_theme_font_size_override("font_size", 14)
 			button.disabled = locked
+			GameUI.card_state(button, level == rank, not locked)
 			button.tooltip_text = item.options[level - 1] if level > 0 else "关闭此词条"
 	var summary: Panel = GameUI.panel(self, Rect2(860, 102, 380, 510))
 	var caption: Label = GameUI.label(summary, (DifficultyCatalog.title(locked_run.mode_id) + " · 旧版冒险") if legacy else "挑战等级  %d" % int(challenge.risk), 27, GameUI.GOLD)
 	caption.position = Vector2(20, 18)
-	var initial: int = RunModel.INITIAL_SHOTS + int(TalentCatalog.effects(profile.talents).get("initial_shots", 0)) - int(p.draw_penalty)
+	var initial: int = RunModel.CURRENT_INITIAL_SHOTS + int(TalentCatalog.effects(profile.talents).get("initial_shots", 0)) - int(p.draw_penalty)
 	if locked: initial = locked_run.initial_shots
 	var stats: String = "开局拉弓 %d 次 · 神器 %d 格\n每段可买补给 %d 次\n技能 / 神器价格 ×%.2f\n普通靶血量 ×%.2f · 护甲 +%d\nBoss 血量 ×%.2f\n普通靶靶心高度 ×%.2f" % [initial, int(p.artifact_slots), int(p.supply_limit), p.price_multiplier, p.target_health, int(p.target_armor), p.boss_health, p.bullseye_scale]
 	if legacy:
 		var old: Dictionary = locked_run.mode_parameters
 		stats = "此存档继续沿用原有难度与构筑。\n\n普通靶血量 ×%.2f\nBoss 血量 ×%.2f · 得分 ×%.2f\n每击倒一次，新靶基础血量 +%.0f%%\n初始拉弓 %d 次 · 神器 %d 格\n\n本局结束后，新冒险可自由搭配契约。" % [old.target_health, old.boss_health, old.score, old.health_growth * 100, initial, locked_run.artifact_capacity]
 	var body: Label = GameUI.label(summary, stats, 16)
+	if not legacy:
+		body.text += "\n新靶血量／护甲逐渐放缓增长" if not locked or locked_run.balance_revision >= 1 else "\n本局保留原有靶子成长"
 	body.position = Vector2(20, 72)
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.size = Vector2(340, 360 if legacy else 190)

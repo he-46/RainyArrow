@@ -27,10 +27,11 @@ func start_run(replace_existing: bool = false, mode_id: String = "normal", contr
 		end_run("abandoned")
 	_detach_run()
 	run = RunModel.new(mode_id, contracts)
+	run.active.id = profile.equipped_active
 	run.starting_level = profile.level
 	run.talent_snapshot = profile.talents.duplicate(true)
 	run.rebuild_stats()
-	run.initial_shots = maxi(1, RunModel.INITIAL_SHOTS + int(run.talent_effects.get("initial_shots", 0)) - int(run.contract_value("draw_penalty", 0)))
+	run.initial_shots = maxi(1, run.initial_shots + int(run.talent_effects.get("initial_shots", 0)))
 	run.shots_left = run.initial_shots
 	run.stage_finished.connect(_on_stage_finished)
 	world_snapshot = {}
@@ -119,6 +120,12 @@ func purchase_talent(id: String) -> bool:
 func reset_talents() -> int:
 	return profile.reset_talents() if in_lobby else 0
 
+func unlock_active(id: String) -> bool:
+	return in_lobby and profile.unlock_active(id)
+
+func equip_active(id: String) -> bool:
+	return in_lobby and not has_active_run() and profile.equip_active(id)
+
 func settle_shot(shot_id: int, hits: Array) -> bool:
 	if in_lobby or not has_active_run() or run.phase != RunModel.Phase.PLAYING or shot_id <= run.last_settled_shot or shot_id > run.shot_sequence:
 		return false
@@ -131,6 +138,13 @@ func settle_shot(shot_id: int, hits: Array) -> bool:
 		unique[key] = true
 		effective.append(hit)
 	run.combo = 0 if effective.is_empty() else run.combo + 1
+	var energy_hit: bool = false
+	var energy_bullseye: bool = false
+	for hit: Dictionary in effective:
+		if not bool(hit.get("energy_eligible", false)): continue
+		energy_hit = true
+		energy_bullseye = energy_bullseye or bool(hit.get("bullseye", false))
+	run.active.gain((4 if energy_hit else 0) + (2 if energy_bullseye else 0))
 	var refunded: int = 0
 	for hit: Dictionary in effective:
 		var killed: bool = false
@@ -182,6 +196,11 @@ static func from_dict(data: Dictionary) -> GameSession:
 		result.run.suspended = result.in_lobby
 	result.world_snapshot = ArcheryWorld.upgrade_snapshot(data.get("world", {}))
 	result.last_run_summary = data.get("last_run_summary", {}).duplicate(true)
+	# JSON decodes every number as float. Use the same canonical v1 contract
+	# types as RunModel/Leaderboard, so a completed run can be saved again.
+	var summary_challenge: Variant = result.last_run_summary.get("challenge", {})
+	if ContractCatalog.valid_snapshot(summary_challenge) and not summary_challenge.is_empty():
+		result.last_run_summary["challenge"] = ContractCatalog.snapshot(summary_challenge.selection)
 	result.migration = data.get("migration", {}).duplicate(true)
 	if result.run != null and result.run.is_finished():
 		result.end_run("completed" if result.run.phase == RunModel.Phase.WON else "exhausted")

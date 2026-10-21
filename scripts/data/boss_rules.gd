@@ -48,3 +48,10 @@ func values(round_number: int, mode: Dictionary = {}) -> Dictionary:
 		"reward_score": roundf(score * (1.0 + step * reward_growth)) * float(mode.get("score", 1.0)),
 		"reward_gold": roundf(gold * (1.0 + step * reward_growth)),
 	}
+
+static func resilient_damage(previous: float, incoming: float, threshold: float) -> float:
+	# Linear up to T, then T * (1 + ln(D/T)) per entire draw. Incremental form
+	# preserves small late contacts and does not favor a large number of arrows.
+	var normal: float = minf(incoming, maxf(0.0, threshold - previous))
+	var excess: float = maxf(0.0, incoming - normal)
+	return normal + threshold * log(1.0 + excess / maxf(threshold, previous))

@@ -3,6 +3,18 @@ extends RefCounted
 ## Continuous collision for a circular arrowhead against axis-aligned rectangular targets.
 
 static func circle_rect(start: Vector2, step: Vector2, radius: float, rect: Rect2) -> Dictionary:
+	# Reject only separated swept bounds. Border contacts and rounded-corner tests
+	# still use the exact solver; the margin is conservative for float rounding.
+	var end: Vector2 = start + step
+	var coordinate_scale: float = maxf(maxf(start.abs().x, start.abs().y), maxf(end.abs().x, end.abs().y))
+	coordinate_scale = maxf(coordinate_scale, maxf(rect.position.abs().x, rect.position.abs().y))
+	coordinate_scale = maxf(coordinate_scale, maxf(rect.end.abs().x, rect.end.abs().y))
+	var padding: float = radius + maxf(0.0001, coordinate_scale * 0.000001)
+	if maxf(start.x, end.x) + padding < rect.position.x or minf(start.x, end.x) - padding > rect.end.x or maxf(start.y, end.y) + padding < rect.position.y or minf(start.y, end.y) - padding > rect.end.y:
+		return {}
+	return _circle_rect_exact(start, step, radius, rect)
+
+static func _circle_rect_exact(start: Vector2, step: Vector2, radius: float, rect: Rect2) -> Dictionary:
 	var nearest := start.clamp(rect.position, rect.end)
 	if start.distance_squared_to(nearest) <= radius * radius:
 		return {"fraction": 0.0, "normal": -step.normalized()}

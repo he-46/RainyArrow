@@ -67,7 +67,7 @@ func _run() -> void:
 		var actual: Image = await frame_image()
 		var area: Rect2i = areas[CosmeticCatalog.find(id).slot]
 		check(actual.get_region(area).get_data() != baseline.get_region(area).get_data(), "actual component pixels change: " + id)
-		check(main.world.snapshot() == physics and main.run.shots_left == 9, "equip changes no in-flight physics: " + id)
+		check(main.world.snapshot() == physics and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1, "equip changes no in-flight physics: " + id)
 		baseline = actual
 	await capture("flight-cool")
 	main._on_action("hub", null)

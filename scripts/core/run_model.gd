@@ -9,6 +9,7 @@ signal stage_finished
 enum Phase { PLAYING, SHOP, CHOICE, WON, LOST, SUPPLY }
 const LEGACY_LAST_STAGE: int = 5
 const INITIAL_SHOTS: int = 10
+const CURRENT_INITIAL_SHOTS: int = 16
 const BOSS_RULES: BossRules = preload("res://data/boss_rules.tres")
 
 var _mode_id: String = "normal"
@@ -18,6 +19,7 @@ var mode_id: String:
 var mode_parameters: Dictionary:
 	get: return _mode_parameters.duplicate()
 var _challenge: Dictionary = {}
+var balance_revision: int = 0 # 0: legacy; 1: target growth; 2: Boss resilience; 3: damage pacing.
 var challenge: Dictionary:
 	get: return _challenge.duplicate(true)
 var contract_stage_base_score: float = 0.0
@@ -50,6 +52,7 @@ var legacy_skill_levels: Dictionary = {}
 var encounters: Array[String] = []
 var choices: Array[String] = []
 var stats: BowStats
+var active: ActiveAbility = ActiveAbility.new()
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var run_id: String
 var ruleset: String = "continuous_v1"
@@ -105,12 +108,13 @@ func _init(mode: String = "normal", contracts: Variant = null) -> void:
 	_mode_id = config.id
 	_mode_parameters = config.parameters()
 	if ContractCatalog.valid_selection(contracts):
+		balance_revision = 3
 		_challenge = ContractCatalog.snapshot(contracts)
 		var p: Dictionary = _challenge.parameters
 		_mode_parameters = {"target_health": p.target_health, "boss_health": p.boss_health, "score": 1.0, "health_growth": 0.06}
 		supply_parameters["limit"] = int(p.supply_limit)
 		artifact_capacity = int(p.artifact_slots)
-		initial_shots = INITIAL_SHOTS - int(p.draw_penalty)
+		initial_shots = CURRENT_INITIAL_SHOTS - int(p.draw_penalty)
 		shots_left = initial_shots
 	rng.randomize()
 	run_id = "%x-%x" % [rng.randi(), rng.randi()]
@@ -121,6 +125,8 @@ func contract_value(key: String, fallback: float) -> float:
 
 func field_parameters() -> Dictionary:
 	var result: Dictionary = mode_parameters
+	if balance_revision >= 1: result["growth_revision"] = 1
+	if balance_revision >= 2: result["boss_impact_revision"] = 1
 	result["target_armor"] = int(contract_value("target_armor", 0))
 	result["bullseye_scale"] = contract_value("bullseye_scale", 1)
 	return result
@@ -282,7 +288,10 @@ func calculate_raw_stats(levels: Dictionary, picks: Dictionary, masteries: Varia
 	for skill: RunSkillData in SkillCatalog.ALL:
 		var rank: int = clampi(int(levels.get(String(skill.id), 0)), 0, skill.max_level)
 		for field: String in skill.additions:
-			result.set(field, result.get(field) + skill.additions[field] * rank)
+			var addition: float = skill.additions[field] * rank
+			if balance_revision >= 3 and skill.id == &"damage" and field == "damage":
+				addition = skill.paced_damage(rank)
+			result.set(field, result.get(field) + addition)
 		var mastery: int = clampi(int(ranks.get(String(skill.id), 0)), 0, skill.mastery_max_level)
 		var weight: float = skill.mastery_weight(mastery)
 		var factor: float = skill.damage_factor
@@ -632,7 +641,14 @@ func skill_limit(skill: RunSkillData) -> int:
 	return skill.mastery_max_level if skill_is_mastery(skill) else skill.max_level
 
 func skill_price(skill: RunSkillData) -> int:
+	if balance_revision >= 3 and skill.id == &"damage": return contract_price(skill.paced_price(skill_rank(skill), skill_is_mastery(skill)))
 	return contract_price(skill.mastery_price(skill_rank(skill)) if skill_is_mastery(skill) else skill.price(skill_rank(skill)))
+
+func skill_description(skill: RunSkillData) -> String:
+	if skill_is_mastery(skill): return skill.mastery_description
+	if balance_revision >= 3 and skill.id == &"damage":
+		return "基础增伤逐级放缓，满级共 +%.0f" % skill.paced_damage(skill.max_level)
+	return skill.description
 
 func skill_has_gain(skill: RunSkillData) -> bool:
 	return skill != null and SkillCatalog.find(skill.id) == skill and skill_rank(skill) < skill_limit(skill) and _has_stat_gain(evaluate_stats(skill_levels, encounter_picks).effective, preview_skill(skill))
@@ -738,6 +754,7 @@ func consume_shot() -> bool:
 		return false
 	shots_left -= 1
 	shot_sequence += 1
+	active.gain(8)
 	changed.emit()
 	return true
 
@@ -890,6 +907,7 @@ func buy(upgrade: RunSkillData) -> bool:
 func to_dict() -> Dictionary:
 	_sync_reward_queue()
 	return {
+		"active_schema": 1, "active": active.to_dict(),
 		"challenge_schema": 1, "challenge": challenge, "contract_stage_base_score": contract_stage_base_score, "contract_stage_bonus_earned": contract_stage_bonus_earned,
 		"mode_schema": 1, "mode_id": mode_id, "mode_parameters": mode_parameters,
 		"ranking_schema": 1, "ranking_processed": ranking_processed, "rank_at_finish": rank_at_finish, "ended_at": ended_at,
@@ -914,7 +932,7 @@ func to_dict() -> Dictionary:
 		"gold_fraction": gold_fraction, "score": score, "prototype_total_score": prototype_total_score,
 		"skill_levels": skill_levels.duplicate(), "encounters": encounters.duplicate(),
 		"choices": choices.duplicate(), "rng_seed": str(rng.seed), "rng_state": str(rng.state),
-		"run_id": run_id, "ruleset": ruleset, "initial_shots": initial_shots,
+		"run_id": run_id, "ruleset": ruleset, "initial_shots": initial_shots, "balance_revision": balance_revision,
 		"talent_snapshot": talent_snapshot.duplicate(true), "defeated_count": defeated_count,
 		"defeat_score": defeat_score, "difficulty_step": difficulty_step,
 		"credited_defeats": credited_defeats.duplicate(), "seen_encounters": seen_encounters.duplicate(),
@@ -923,6 +941,8 @@ func to_dict() -> Dictionary:
 
 static func from_dict(data: Dictionary) -> RunModel:
 	var result: RunModel = RunModel.new(str(data.get("mode_id", "normal")) if int(data.get("mode_schema", 0)) == 1 else "normal")
+	result.balance_revision = int(data.get("balance_revision", 0))
+	if data.get("active") is Dictionary: result.active = ActiveAbility.from_dict(data.active)
 	if int(data.get("mode_schema", 0)) == 1 and data.get("mode_parameters") is Dictionary:
 		for key: String in result._mode_parameters:
 			result._mode_parameters[key] = float(data["mode_parameters"].get(key, result._mode_parameters[key]))

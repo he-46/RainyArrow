@@ -130,7 +130,7 @@ func run() -> void:
 	await wheel(false)
 	await click(page().nodes["quiver_root"])
 	await click(page().detail.get_node("PurchaseTalent"))
-	check(main.session.profile.talents.get("quiver_root") == 1 and main.run.talent_snapshot == frozen and main.run.shots_left == 10, "native lobby purchase affects only next run")
+	check(main.session.profile.talents.get("quiver_root") == 1 and main.run.talent_snapshot == frozen and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS, "native lobby purchase affects only next run")
 	await capture("next-run-only")
 	main.queue_free()
 	await process_frame

@@ -27,6 +27,21 @@ var boss_hint: Label
 var boss_panel: Panel
 var boss_title: Label
 var boss_health: ProgressBar
+var active_button: Button
+var energy_bar: ProgressBar
+var active_hint: Label
+var active_panel: Panel
+var active_icon: ActiveSkillIcon
+var energy_ruler: EnergyRuler
+var run_score_label: Label
+var instruction: Label
+var details_open: bool = false
+var details_help: bool = false
+var details_overlay: ColorRect
+var details_title: Label
+var help_label: Label
+var details_button: Button
+var help_button: Button
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -47,6 +62,9 @@ func _ready() -> void:
 	progress.add_theme_stylebox_override("background", GameUI.box(Color("10252c"), Color("263d40")))
 	progress.add_theme_stylebox_override("fill", GameUI.box(Color("c9ab68"), Color("c9ab68")))
 	header.add_child(progress)
+	BuildIcon.add_to(header, "experience", Vector2(387, 25), 22, GOLD)
+	BuildIcon.add_to(header, "quiver", Vector2(640, 24), 22, GameUI.CREAM)
+	BuildIcon.add_to(header, "coin", Vector2(804, 24), 22, GOLD)
 	shots_label = GameUI.label(header, "", 18)
 	shots_label.position = Vector2(668, 22)
 	gold_label = GameUI.label(header, "", 20, GOLD)
@@ -57,12 +75,22 @@ func _ready() -> void:
 	pause_button = GameUI.button(header, "暂停", func() -> void: action.emit("pause", null))
 	pause_button.position = Vector2(1101, 18)
 	pause_button.size = Vector2(108, 38)
-	var footer: Panel = GameUI.panel(self, Rect2(24, 638, 1232, 62))
-	stats_label = GameUI.label(footer, "", 16)
-	stats_label.position = Vector2(16, 7)
-	hint_label = GameUI.label(footer, "", 13, MUTED)
-	hint_label.position = Vector2(16, 34)
-	var instruction: Label = GameUI.label(self, "按住弓附近，向后拖拽\n松手射箭 · 向下拖可抬高弹道", 16, Color("b3c4b6"))
+	var footer: Panel = GameUI.panel(self, Rect2(24, 632, 1232, 72))
+	run_score_label = GameUI.label(footer, "", 18, GOLD)
+	run_score_label.position = Vector2(18, 9)
+	hint_label = GameUI.label(footer, "", 12, MUTED)
+	hint_label.position = Vector2(18, 40)
+	hint_label.size = Vector2(380, 22)
+	hint_label.clip_text = true
+	details_button = GameUI.button(footer, "属性 [R]", func() -> void: action.emit("combat_details", null))
+	details_button.position = Vector2(912, 15)
+	details_button.size = Vector2(132, 42)
+	details_button.visible = supply_enabled
+	help_button = GameUI.button(footer, "操作 [F1]", func() -> void: action.emit("combat_help", null))
+	help_button.position = Vector2(1056, 15)
+	help_button.size = Vector2(156, 42)
+	help_button.visible = supply_enabled
+	instruction = GameUI.label(self, "按住弓附近，向后拖拽\n松手射箭 · 向下拖可抬高弹道", 16, Color("b3c4b6"))
 	instruction.position = Vector2(40, 338)
 	instruction.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mode_label = GameUI.label(self, "暮 林 · 连 续 靶 场", 13, MUTED)
@@ -77,6 +105,7 @@ func _ready() -> void:
 	debug_label.position = Vector2(35, 213)
 	debug_label.visible = false
 	boss_hint = GameUI.label(self, "", 14, GOLD)
+	boss_hint.mouse_filter = Control.MOUSE_FILTER_PASS
 	boss_hint.position = Vector2(40, 226)
 	boss_panel = GameUI.panel(self, Rect2(400, 116, 620, 72))
 	boss_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -90,6 +119,35 @@ func _ready() -> void:
 	boss_health.add_theme_stylebox_override("fill", GameUI.box(Color("bc7048"), Color("bc7048")))
 	boss_panel.add_child(boss_health)
 	boss_panel.hide()
+	active_panel = GameUI.panel(self, Rect2(450, 630, 474, 76))
+	active_icon = ActiveSkillIcon.new()
+	active_icon.position = Vector2(10, 12)
+	active_icon.size = Vector2(48, 48)
+	active_panel.add_child(active_icon)
+	active_button = GameUI.button(active_panel, "主动技能", func() -> void: action.emit("active_cast", null))
+	active_button.position = Vector2(68, 4)
+	active_button.size = Vector2(394, 36)
+	active_button.custom_minimum_size.y = 36
+	active_button.add_theme_font_size_override("font_size", 16)
+	energy_bar = ProgressBar.new()
+	energy_bar.position = Vector2(68, 47)
+	energy_bar.max_value = ActiveAbility.MAX_ENERGY
+	energy_bar.show_percentage = false
+	energy_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for part: String in ["fill", "background"]:
+		var color := Color("8fd9ba") if part == "fill" else Color("263b3e")
+		var style: StyleBoxFlat = GameUI.box(color, color)
+		for side: String in ["left", "right", "top", "bottom"]: style.set("content_margin_" + side, 0.0)
+		energy_bar.add_theme_stylebox_override(part, style)
+	energy_bar.size = Vector2(394, 8)
+	active_panel.add_child(energy_bar)
+	energy_bar.set_deferred("size", Vector2(394, 8))
+	energy_ruler = EnergyRuler.new()
+	energy_ruler.position = Vector2(68, 44)
+	energy_ruler.size = Vector2(394, 12)
+	active_panel.add_child(energy_ruler)
+	active_hint = GameUI.label(active_panel, "射箭回能 · 时间不回能", 11, MUTED)
+	active_hint.position = Vector2(68, 58)
 	overlay = ColorRect.new()
 	overlay.color = Color(0.025, 0.055, 0.07, 0.82)
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -104,6 +162,36 @@ func _ready() -> void:
 	content.add_theme_constant_override("separation", 10)
 	margin.add_child(content)
 	overlay.visible = false
+	_build_details()
+	_compact_bar(progress, Vector2(220, 12))
+	_compact_bar(boss_health, Vector2(588, 16))
+
+func _compact_bar(bar: ProgressBar, dimensions: Vector2) -> void:
+	for part: String in ["background", "fill"]:
+		var style: StyleBox = bar.get_theme_stylebox(part).duplicate()
+		for side: String in ["left", "right", "top", "bottom"]: style.set("content_margin_" + side, 0.0)
+		bar.add_theme_stylebox_override(part, style)
+	bar.size = dimensions
+	bar.set_deferred("size", dimensions)
+
+func _build_details() -> void:
+	details_overlay = ColorRect.new()
+	details_overlay.color = Color(0.025, 0.055, 0.07, 0.86)
+	details_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(details_overlay)
+	var card: Panel = GameUI.panel(details_overlay, Rect2(300, 120, 680, 480))
+	details_title = GameUI.label(card, "当前弓箭属性", 26, GOLD)
+	details_title.position = Vector2(30, 22)
+	var note: Label = GameUI.label(card, "战斗已暂停 · 关闭后继续当前齐射", 14, MUTED)
+	note.position = Vector2(30, 65)
+	stats_label = GameUI.label(card, "", 20)
+	stats_label.position = Vector2(30, 110)
+	help_label = GameUI.label(card, "拉弓  按住弓附近向后拖拽，松手射箭\n          向下拖拽可抬高弹道，拖远提升拉力\n\n主动技能  Q / 点击技能按钮\n每次拉弓 +8 能量 · 本轮命中 +4 · 靶心再 +2\n能量不会随时间恢复，金色刻线代表技能消耗\n\nR  查看属性    F3  调试数值    M  静音\nEsc  关闭当前面板 / 暂停", 18)
+	help_label.position = Vector2(30, 110)
+	var close_button: Button = GameUI.button(card, "返回靶场 [Esc]", func() -> void: action.emit("details_close", null))
+	close_button.position = Vector2(30, 410)
+	close_button.size = Vector2(620, 44)
+	details_overlay.hide()
 
 func _clear_content() -> void:
 	for child: Node in content.get_children():
@@ -116,6 +204,10 @@ func _coin_label(value: int) -> String:
 	return str(value)
 
 func refresh(run: RunModel, profile: PlayerProfile, muted: bool, save_notice: String) -> void:
+	# State changes can be followed by another input before the next idle update.
+	update_availability(run, false)
+	active_icon.reduced_effects = bool(profile.settings.get("reduced_effects", false))
+	update_active(run)
 	mode_label.text = "暮 林 · 连 续 靶 场 · %s" % run.difficulty_title()
 	mode_label.tooltip_text = ContractCatalog.description(run.challenge)
 	mode_label.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -131,14 +223,22 @@ func refresh(run: RunModel, profile: PlayerProfile, muted: bool, save_notice: St
 	shots_label.text = "剩余拉弓  %02d" % run.shots_left
 	gold_label.text = "金币  %s" % _coin_label(run.gold)
 	var stats: BowStats = run.stats
-	stats_label.text = "单箭 %.1f  /  箭数 %d  /  暴击 %.0f%% ×%.2f  /  穿甲 %d  /  反弹 %d  /  尺寸 ×%.2f  /  得分 %s" % [stats.damage, stats.arrow_count, stats.crit_chance * 100, stats.crit_multiplier, stats.armor_penetration, stats.bounces, stats.arrow_size, GameUI.score_text(run.defeat_score)]
-	hint_label.text = "连中 %d 次 · 齐射结束结算收益 · 整次落空中断连击    ESC 暂停 / 取消拉弓    F3 数值面板    M 静音" % run.combo
+	stats_label.text = "单箭伤害  %.1f                  每次箭数  %d\n\n暴击率  %.0f%%                    暴击伤害  ×%.2f\n\n穿甲  %d                             反弹  %d 次\n\n箭矢尺寸  ×%.2f\n\n本局累计得分 %s" % [stats.damage, stats.arrow_count, stats.crit_chance * 100, stats.crit_multiplier, stats.armor_penetration, stats.bounces, stats.arrow_size, GameUI.score_text(run.defeat_score)]
+	run_score_label.text = "得分 %s   ·   连中 %d" % [GameUI.score_text(run.defeat_score), run.combo]
+	hint_label.text = "齐射结束结算 · 整次落空中断连击"
+	instruction.modulate.a = 1.0 if run.shot_sequence == 0 else 0.30
+	instruction.text = "按住弓附近，向后拖拽\n松手射箭 · 向下拖可抬高弹道" if run.shot_sequence == 0 else "拖拽拉弓 · 松手射箭"
 	if run.shots_left == 0 and not run.is_finished():
 		hint_label.text = "最后一轮箭矢正在结算……"
 	if run.phase == RunModel.Phase.SUPPLY:
 		hint_label.text = "本轮结算完成 · 购买补给继续，或结束本局。"
 	if not save_notice.is_empty():
 		hint_label.text = save_notice
+	hint_label.tooltip_text = hint_label.text
+	details_overlay.visible = details_open
+	details_title.text = "操作指南" if details_help else "当前弓箭属性"
+	stats_label.visible = not details_help
+	help_label.visible = details_help
 	mute_button.text = "声音 关" if muted else "声音 开"
 	encounters_button.text = "奇遇 · 待选 %d" % run.pending_encounters if run.pending_encounters > 0 else "背包 · %d/%d" % [run.artifact_ids().size(), run.artifact_capacity]
 	_show_phase(run, profile)
@@ -149,8 +249,24 @@ func update_availability(run: RunModel, _settled: bool) -> void:
 	encounters_button.tooltip_text = "查看、强化或丢弃神器；每累计 %d 次击倒获得一次选择" % EncounterCatalog.RULES.kills_per_reward
 	skills_button.tooltip_text = "暂停战斗并升级；在场箭矢保留发射时属性"
 
+func update_active(run: RunModel, can_cast: bool = false) -> void:
+	var active: ActiveAbility = run.active
+	var title: String = str(ActiveAbility.ALL[active.id].title) if ActiveAbility.ALL.has(active.id) else "未装备主动技能"
+	active_button.text = "%s  [Q]  %d/100" % [title, active.energy]
+	active_button.disabled = not can_cast
+	active_button.tooltip_text = active.status() + "\n每次拉弓 +8；整轮有效命中 +4；靶心再 +2。不会随时间恢复。"
+	active_icon.configure(active.id, can_cast)
+	var cost: int = int(ActiveAbility.ALL[active.id].cost) if ActiveAbility.ALL.has(active.id) else 101
+	var total: int = int(ActiveAbility.ALL[active.id].draws) if ActiveAbility.ALL.has(active.id) else 0
+	active_icon.update_charge(run.run_id + active.id, active.energy >= cost and active.remaining == 0, active.remaining, total)
+	energy_ruler.set_cost(int(ActiveAbility.ALL[active.id].cost) if ActiveAbility.ALL.has(active.id) else 0)
+	energy_bar.value = active.energy
+	active_hint.text = "已发动 · 剩余 %d 次拉弓" % active.remaining if active.remaining > 0 else ("天赋 → 主动技能 · 首个免费" if active.id.is_empty() else "消耗 %d · 射箭回能，等待不回能" % int(ActiveAbility.ALL[active.id].cost))
+	if can_cast: active_hint.text = "能量就绪 · Q 施放 · 消耗 %d" % cost
+
 func update_boss(run: RunModel, world: ArcheryWorld) -> void:
-	boss_panel.visible = run.boss_active and world.boss != null and run.phase == RunModel.Phase.PLAYING and not encounter_log_open
+	boss_hint.tooltip_text = ""
+	boss_panel.visible = run.boss_active and world.boss != null and run.phase == RunModel.Phase.PLAYING and not encounter_log_open and not details_open
 	if run.boss_active:
 		boss_hint.text = "BOSS 第 %d 次 · 击败后重新补靶" % run.boss_round
 	elif run.boss_due():
@@ -164,6 +280,9 @@ func update_boss(run: RunModel, world: ArcheryWorld) -> void:
 		if world.boss.combat_schema == 1:
 			boss_hint.text += "\n金色弱点 ×%.2f · 甲 %d" % [float(world.boss.parameters["weak_multiplier"]), maxi(0, world.boss.armor - int(world.boss.parameters["weak_armor_reduction"]))]
 			if world.boss.battle_phase == 2: boss_hint.text += "\n护板甲 %d · 穿甲更高才能穿过" % world.boss.shield_armor()
+		if world.boss.impact_revision == 1:
+			boss_hint.text += "\n韧甲 · 每次拉弓爆发递减"
+			boss_hint.tooltip_text = "同次拉弓前 %.0f 伤害正常结算，超出部分收益递减。\n主箭、子箭、反弹与回响合并计算；弱点、暴击和主动仍能增伤。\n下一次拉弓重新计算，等待不会重置。" % (world.boss.max_hp * ArcheryBoss.BURST_RATIO)
 		boss_health.max_value = world.boss.max_hp
 		boss_health.value = world.boss.hp
 
@@ -190,12 +309,9 @@ func _show_phase(run: RunModel, profile: PlayerProfile) -> void:
 	phase_card.size.y = 516
 	content.add_theme_constant_override("separation", 10)
 	if run.phase == RunModel.Phase.SHOP:
-		var has_mastery: bool = false
-		for skill: RunSkillData in SkillCatalog.ALL:
-			if run.skill_is_mastery(skill): has_mastery = true
 		phase_card.position.y = 24
 		phase_card.size.y = 672
-		content.add_theme_constant_override("separation", 6)
+		content.add_theme_constant_override("separation", 3)
 		GameUI.label(content, "技能 · 让下一箭更强", 25, GOLD)
 		GameUI.label(content, "战斗已暂停 · 在场箭矢保留原属性，新升级从下一次拉弓生效。", 14, MUTED)
 		var grid: GridContainer = GridContainer.new()
@@ -215,12 +331,13 @@ func _show_phase(run: RunModel, profile: PlayerProfile) -> void:
 			elif run.gold < price:
 				suffix += " · 缺 %s" % _coin_label(price - run.gold)
 			var comparison: String = run.skill_comparison(upgrade)
-			var text: String = "%s%s %d/%d | %s\n%s\n%s" % [upgrade.title, " · 精通" if mastery else "", count, run.skill_limit(upgrade), suffix, upgrade.mastery_description if mastery else upgrade.description, comparison]
-			var button: Button = GameUI.button(grid, text, func() -> void: action.emit("purchase", upgrade))
-			button.name = String(upgrade.id)
-			button.custom_minimum_size = Vector2(362, 110 if has_mastery else 98)
-			button.add_theme_font_size_override("font_size", 13 if has_mastery else 14)
-			button.disabled = not run.can_buy(upgrade)
+			var description: String = run.skill_description(upgrade)
+			var text: String = "%s%s %d/%d | %s\n%s\n%s" % [upgrade.title, " · 精通" if mastery else "", count, run.skill_limit(upgrade), suffix, description, comparison]
+			var button := UpgradeCard.new()
+			grid.add_child(button)
+			button.configure(String(upgrade.id), "%s%s %d/%d" % [upgrade.title, " · 精通" if mastery else "", count, run.skill_limit(upgrade)], suffix, description, comparison, not run.can_buy(upgrade), mastery)
+			button.text = text
+			button.pressed.connect(func() -> void: action.emit("purchase", upgrade))
 			var before_lines: Array[String] = run.stat_explanations(run.evaluate_stats(run.skill_levels, run.encounter_picks))
 			var after_lines: Array[String] = run.stat_explanations(run.preview_skill_evaluation(upgrade))
 			button.tooltip_text = "当前\n" + "\n".join(before_lines) + "\n升级后\n" + "\n".join(after_lines) if not before_lines.is_empty() else comparison

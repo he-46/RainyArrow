@@ -61,4 +61,13 @@ static func button(parent: Node, text: String, callback: Callable) -> Button:
 	parent.add_child(button)
 	return button
 
+static func card_state(button: Button, selected: bool, available: bool, accent: Color = GOLD) -> void:
+	var edge: Color = GOLD if selected else (accent.darkened(0.25) if available else Color("405458"))
+	var fill := Color("2b423e") if selected else Color("192f36")
+	button.add_theme_stylebox_override("normal", box(fill, edge))
+	button.add_theme_stylebox_override("hover", box(fill.lightened(0.07), GOLD))
+	button.add_theme_stylebox_override("pressed", box(Color("40584b"), GOLD))
+	button.add_theme_stylebox_override("disabled", box(Color("162930"), edge))
+	button.add_theme_stylebox_override("focus", box(Color.TRANSPARENT, Color("b6e4d0")))
+
 

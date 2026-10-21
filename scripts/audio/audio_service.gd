@@ -1,15 +1,35 @@
 class_name AudioService
 extends Node
-## Original synthesized placeholder sounds. Replace streams without changing gameplay.
+## Sound effects and persistent, crossfading music on independent audio buses.
 
 const VOICES: int = 10
+const MUSIC_FADE_SECONDS: float = 0.65
+const MUSIC: Dictionary = {
+	"menu": preload("res://assets/audio/music/01_menu_moonlit_bow.ogg"),
+	"camp": preload("res://assets/audio/music/03_ref_campfire_letters.ogg"),
+	"battle": preload("res://assets/audio/music/battle_v4/E_ranger_skirmish.ogg"),
+}
+var music_players: Dictionary = {}
+var music_positions: Dictionary = {}
+var music_context: String = ""
+var music_fade: Tween
 var players: Array[AudioStreamPlayer] = []
 var sounds: Dictionary = {}
 var sound_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 var muted: bool = false
 
 func _ready() -> void:
-	# Headless CI has no listener; avoid opening audio playback resources there.
+	# Music and its fades continue when the field is paused for menus/upgrades.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	for context: String in MUSIC:
+		var player := AudioStreamPlayer.new()
+		player.name = "Music_" + context
+		player.bus = "Music"
+		player.stream = MUSIC[context]
+		player.volume_linear = 0.0
+		add_child(player)
+		music_players[context] = player
+	# Headless checks use the dummy audio driver; synthesized SFX aren't needed.
 	if DisplayServer.get_name() == "headless":
 		return
 	sound_rng.seed = 8721
@@ -17,6 +37,9 @@ func _ready() -> void:
 	sounds["hit"] = _tone(150.0, 0.1, 0.55, -65.0)
 	sounds["bullseye"] = _tone(740.0, 0.17, 0.05, 250.0)
 	sounds["break"] = _tone(100.0, 0.19, 0.75, -55.0)
+	sounds["critical"] = _tone(540.0, 0.16, 0.2, -140.0)
+	sounds["metal_hit"] = _tone(320.0, 0.09, 0.4, -120.0)
+	sounds["ricochet"] = _tone(950.0, 0.09, 0.12, -400.0)
 	sounds["coin"] = _tone(1050.0, 0.12, 0.0, 450.0)
 	sounds["draw"] = _tone(170.0, 0.1, 0.2, 180.0)
 	sounds["boss_entry"] = _tone(110.0, 0.45, 0.22, -55.0)
@@ -25,10 +48,36 @@ func _ready() -> void:
 	sounds["shield_pass"] = _tone(420.0, 0.12, 0.3, 420.0)
 	sounds["boss_weak"] = _tone(880.0, 0.22, 0.06, 300.0)
 	sounds["boss_victory"] = _tone(520.0, 0.58, 0.0, 700.0)
+	sounds["active_skill"] = _tone(390.0, 0.24, 0.08, 460.0)
 	for index: int in range(VOICES):
 		var player: AudioStreamPlayer = AudioStreamPlayer.new()
 		add_child(player)
 		players.append(player)
+
+func play_music(context: String) -> void:
+	if context == music_context or not music_players.has(context): return
+	music_context = context
+	# Cancel stale stop callbacks when navigating again during a crossfade.
+	if music_fade != null: music_fade.kill()
+	var incoming: AudioStreamPlayer = music_players[context]
+	if not incoming.playing:
+		incoming.volume_linear = 0.0
+		incoming.play(float(music_positions.get(context, 0.0)))
+	music_fade = create_tween().set_parallel(true)
+	music_fade.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+	for key: String in music_players:
+		var player: AudioStreamPlayer = music_players[key]
+		if player.playing:
+			music_fade.tween_property(player, "volume_linear", 1.0 if key == context else 0.0, MUSIC_FADE_SECONDS)
+	music_fade.chain().tween_callback(_finish_music_fade.bind(context))
+
+func _finish_music_fade(context: String) -> void:
+	if context != music_context: return
+	for key: String in music_players:
+		var player: AudioStreamPlayer = music_players[key]
+		if key != context and player.playing:
+			music_positions[key] = fmod(player.get_playback_position(), player.stream.get_length())
+			player.stop()
 
 func play(cue: String, pitch: float = 1.0) -> void:
 	if muted or not sounds.has(cue):
@@ -59,6 +108,11 @@ func _set_volume(bus: String, volume: float, trim: float) -> void:
 	else: AudioServer.set_bus_mute(index, muted or volume <= 0.0)
 
 func _exit_tree() -> void:
+	if music_fade != null: music_fade.kill()
+	for player: AudioStreamPlayer in music_players.values():
+		player.stop()
+		player.stream = null
+	music_players.clear()
 	for player: AudioStreamPlayer in players:
 		player.stop()
 		player.stream = null

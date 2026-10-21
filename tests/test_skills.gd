@@ -156,7 +156,7 @@ func _in_flight(tree: SceneTree) -> void:
 	verify(tree.paused and arrow.position == at, "Opening skills freezes live projectile")
 	var grid: GridContainer = main.hud.content.get_child(2)
 	(grid.get_child(2) as Button).pressed.emit()
-	verify(main.run.stats.damage == 32 and arrow.stats.to_dict() == before, "Purchase affects future shots, not in-flight snapshot")
+	verify(is_equal_approx(main.run.stats.damage, 55.8485736442798) and arrow.stats.to_dict() == before, "Purchase affects future shots, not in-flight snapshot")
 	var payload: Dictionary = main.saves.read()
 	verify(payload["world"]["arrows"].size() == 1 and payload["run"]["gold"] == 88, "Save commits purchase and in-flight arrow together")
 	var bad: Dictionary = payload.duplicate(true)
@@ -170,7 +170,7 @@ func _in_flight(tree: SceneTree) -> void:
 	main.run.changed.connect(main._refresh)
 	main._enter_range()
 	verify(tree.paused and main.world.arrows[0].snapshot() == state, "Disk restore returns to paused skills and exact projectile")
-	verify(main.run.stats.damage == 32 and main.world.arrows[0].stats.damage == 24 and main.run.shots_left == 9, "Restore retains new build, old projectile damage and spent draw")
+	verify(is_equal_approx(main.run.stats.damage, 55.8485736442798) and main.world.arrows[0].stats.damage == 24 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1, "Restore retains new build, old projectile damage and spent draw")
 	main._continue()
 	await tree.physics_frame
 	await tree.physics_frame

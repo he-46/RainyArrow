@@ -33,3 +33,7 @@ save.json
 *.key
 .DS_Store
 Thumbs.db
+
+# Local music-rendering Python cache.
+__pycache__/
+*.py[cod]

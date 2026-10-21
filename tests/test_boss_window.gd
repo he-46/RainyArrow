@@ -60,7 +60,7 @@ func _run() -> void:
 	await process_frame
 	press(motion.position, false)
 	await process_frame
-	check(main.run.shots_left == 9 and not main.world.arrows.is_empty(), "viewport release launches and consumes exactly one draw")
+	check(main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1 and not main.world.arrows.is_empty(), "viewport release launches and consumes exactly one draw")
 	for index: int in range(160): await physics_frame
 	main.world.set_physics_process(false)
 	check(main.world.boss.hp < 2880 and main.world.boss.hp > 0 and main.run.bosses_defeated == 0, "real ballistic shot damages the Boss without a victory reward")
@@ -78,7 +78,7 @@ func _run() -> void:
 	main._on_action("range", null)
 	main.world.set_physics_process(false)
 	await capture("boss-continued")
-	check(main.world.boss.hp == health and main.run.shots_left == 9 and main.world.targets.is_empty(), "disk Continue restores rendered damage and spent draw")
+	check(main.world.boss.hp == health and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1 and main.world.targets.is_empty(), "disk Continue restores rendered damage and spent draw")
 	DisplayServer.window_set_size(Vector2i(960, 540))
 	await create_timer(0.1).timeout
 	await capture("boss-small")

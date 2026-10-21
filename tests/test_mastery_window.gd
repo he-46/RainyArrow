@@ -39,12 +39,13 @@ func capture(name: String, shop: bool = true) -> void:
 	await RenderingServer.frame_post_draw
 	if shop:
 		for button: Button in main.hud.content.get_child(2).get_children():
-			var font: Font = button.get_theme_font("font")
-			var size: int = button.get_theme_font_size("font_size")
 			var fits: bool = true
-			for line: String in button.text.split("\n"):
-				fits = fits and font.get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x <= button.size.x - 20
-			check(fits and button.text.split("\n").size() * font.get_height(size) <= button.size.y - 14, "skill card text fits: " + name + "/" + str(button.name))
+			var previous_bottom: float = 0
+			for id: String in ["CardTitle", "CardState", "CardDescription", "CardComparison"]:
+				var label: Label = button.get_node(id)
+				fits = fits and Rect2(Vector2.ZERO, button.size).encloses(label.get_rect()) and label.position.y >= previous_bottom
+				previous_bottom = label.get_rect().end.y
+			check(fits, "skill card labels fit without overlap: " + name + "/" + str(button.name))
 		check(main.hud.content.get_global_rect().end.y <= main.hud.phase_card.get_global_rect().end.y - 16, "return button and all cards contained: " + name)
 	check(root.get_texture().get_image().save_png("res://artifacts/t12a-" + name + ".png") == OK, "capture " + name)
 
@@ -120,7 +121,7 @@ func _run() -> void:
 	main.world.pull = 1
 	main.world._release()
 	freeze()
-	check(main.world.arrows.size() == 10 and main.world.arrows[3].stats.to_dict() == main.run.stats.to_dict() and main.run.shots_left == 8, "new real seven-arrow volley samples mastery and spends one draw")
+	check(main.world.arrows.size() == 10 and main.world.arrows[3].stats.to_dict() == main.run.stats.to_dict() and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 2, "new real seven-arrow volley samples mastery and spends one draw")
 	main._refresh()
 	await capture("new-volley", false)
 	main._on_action("encounters", null)
@@ -158,7 +159,7 @@ func _run() -> void:
 	mastery_test.full(main.run)
 	for skill: RunSkillData in SkillCatalog.ALL:
 		main.run.mastery_unlocks.append(String(skill.id))
-		main.run.mastery_levels[String(skill.id)] = 90
+		main.run.mastery_levels[String(skill.id)] = 99
 	main.run.rebuild_stats()
 	main.run.gold = 0
 	main._on_action("skills", null)

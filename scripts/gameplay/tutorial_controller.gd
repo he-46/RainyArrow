@@ -157,11 +157,13 @@ func set_paused(value: bool) -> void:
 	_refresh()
 
 func _refresh() -> void:
+	audio.play_music("camp" if step in [Step.UPGRADE, Step.COMPLETE] or run.phase != RunModel.Phase.PLAYING else "battle")
 	world.ui_blocked = paused_by_user or step in [Step.UPGRADE, Step.COMPLETE] or run.phase != RunModel.Phase.PLAYING
 	var pause_world: bool = paused_by_user or step in [Step.UPGRADE, Step.COMPLETE] or run.phase in [RunModel.Phase.SHOP, RunModel.Phase.CHOICE]
 	if pause_world: world.reset_shake()
 	get_tree().paused = pause_world
 	page.refresh(run, session.profile, step, paused_by_user, bool(options["muted"]), message)
+	page.hud.active_icon.reduced_effects = bool(options.get("reduced_effects", false))
 
 func dispose() -> void:
 	world.reset_shake()

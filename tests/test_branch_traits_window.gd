@@ -28,7 +28,8 @@ func capture(name: String) -> void:
 	check(root.get_texture().get_image().save_png("res://artifacts/t11d-" + name + ".png") == OK, "capture " + name)
 
 func new_field() -> void:
-	main._new_run()
+	# This historical eight-trait fixture predates contract-fixed backpack capacity.
+	main._new_run("", null, true)
 	main.world.set_physics_process(false)
 	main.world.set_process(false)
 	main.world.boss_enabled = false
@@ -134,6 +135,10 @@ func _run() -> void:
 			else: direct_y = label["position"].y
 	check(is_finite(direct_y) and is_finite(area_y) and area_y <= direct_y - 14.0, "nearby child direct and area reward captions occupy separate rows")
 	main._on_action("hub", null)
+	check(main.saves.last_error.is_empty(), "native pending family saves successfully: " + main.saves.last_error)
+	if not main.saves.last_error.is_empty():
+		quit(1)
+		return
 	var payload: Dictionary = main.saves.read()
 	check(not payload.is_empty(), "native pending premium persisted on disk")
 	main._discard_world()

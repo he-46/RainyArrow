@@ -15,6 +15,10 @@ func check(condition: bool, message: String) -> void:
 
 func _run() -> void:
 	_test_combat()
+	preload("res://tests/test_sweep_culling.gd").new(check).run_all()
+	await preload("res://tests/test_balance_pacing.gd").new(check).run_all(self)
+	await preload("res://tests/test_boss_resilience.gd").new(check).run_all(self)
+	await preload("res://tests/test_damage_pacing.gd").new(check).run_all(self)
 	_test_economy_and_tree()
 	_test_progression()
 	_test_save()
@@ -28,6 +32,12 @@ func _run() -> void:
 	await preload("res://tests/test_traits.gd").new(check).run_all(self)
 	await preload("res://tests/test_conversions.gd").new(check).run_all(self)
 	await preload("res://tests/test_settings.gd").new(check).run_all(self)
+	await preload("res://tests/test_music.gd").new(check).run_all(self)
+	await preload("res://tests/test_active_skills.gd").new(check).run_all(self)
+	await preload("res://tests/test_visual_v01.gd").new(check).run_all(self)
+	await preload("res://tests/test_visual_v02.gd").new(check).run_all(self)
+	await preload("res://tests/test_visual_v03.gd").new(check).run_all(self)
+	await preload("res://tests/test_visual_v04.gd").new(check).run_all(self)
 	await preload("res://tests/test_tutorial.gd").new(check).run_all(self)
 	await preload("res://tests/test_cosmetics.gd").new(check).run_all(self)
 	await preload("res://tests/test_boss.gd").new(check).run_all(self)
@@ -180,6 +190,12 @@ func _test_scene() -> void:
 	root.add_child(main)
 	check(main.router.route == "home" and main.world == null and main.run == null, "Home creates no combat model or world")
 	check(main.router.continue_button.disabled, "Continue is disabled without active adventure")
+	main.saves.write_blocked = true
+	main._save_checkpoint()
+	check(not main.save_notice.is_empty(), "Rejected checkpoint exposes the save failure")
+	main.saves.write_blocked = false
+	main._save_checkpoint()
+	check(main.save_notice.is_empty(), "Successful checkpoint clears an earlier failure notice")
 	main._on_action("start", null)
 	check(main.router.route == "hub" and main.world == null, "Start enters hub without consuming an adventure")
 	for destination: String in ["talents", "cosmetics"]:
@@ -222,7 +238,7 @@ func _test_scene() -> void:
 	release.pressed = false
 	root.push_input(release, true)
 	await process_frame
-	check(main.run.shots_left == 9, "Live volley spends exactly one draw")
+	check(main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1, "Live volley spends exactly one draw")
 	check(not main.world.arrows.is_empty(), "Navigation test begins with a live projectile")
 	var live_world: ArcheryWorld = main.world
 	var live_target: ArcheryTarget = main.world.targets[0]
@@ -237,7 +253,7 @@ func _test_scene() -> void:
 	main._on_action("home", null)
 	check(not main.router.continue_button.disabled, "Home offers Continue for paused adventure")
 	main.router.continue_button.pressed.emit()
-	check(main.router.route == "hub" and main.run.shots_left == 9, "Continue enters hub without refunding draw")
+	check(main.router.route == "hub" and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1, "Continue enters hub without refunding draw")
 	main._on_action("range", null)
 	check(main.world == live_world and main.world.targets[0] == live_target, "Resuming reuses exact world and targets")
 	check(main.run.run_id == run_id and main.world.arrows[0] == live_arrow and not paused, "Resume retains run and in-flight projectile")
@@ -254,11 +270,11 @@ func _test_scene() -> void:
 		main._on_action("talents", null)
 		main._on_action("back", null)
 		main._on_action("range", null)
-	check(main.run.shots_left == 9 and main.run.gold == saved_gold and live_target.hp == saved_hp, "Repeated navigation does not refill, reward or heal")
+	check(main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1 and main.run.gold == saved_gold and live_target.hp == saved_hp, "Repeated navigation does not refill, reward or heal")
 	check(main.router.get_child_count() == 0, "Range retains no hidden page instances")
 	main._on_action("hub", null)
 	var payload: Dictionary = main.saves.read()
-	check(int(payload["run"]["shots_left"]) == 9 and bool(payload["in_lobby"]), "Hub persists suspended run with spent draw")
+	check(int(payload["run"]["shots_left"]) == RunModel.CURRENT_INITIAL_SHOTS - 1 and bool(payload["in_lobby"]), "Hub persists suspended run with spent draw")
 	main._discard_world()
 	main.run.changed.disconnect(main._refresh)
 	main.session = GameSession.from_dict(payload)
@@ -277,7 +293,7 @@ func _test_scene() -> void:
 	main._on_action("back", null)
 	check(main.run.phase == RunModel.Phase.SHOP and main.hud.overlay.visible and paused, "Pause resumes the same skills phase")
 	main._continue()
-	check(main.run.phase == RunModel.Phase.PLAYING and main.world == same_world and main.run.shots_left == 9, "Closing skills keeps continuous targets and ammo")
+	check(main.run.phase == RunModel.Phase.PLAYING and main.world == same_world and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1, "Closing skills keeps continuous targets and ammo")
 	check(main.session.profile.total_score == 0, "Hit-score is never promoted to permanent XP")
 	main.session.profile.record_defeat(250.0)
 	main._on_action("home", null)
@@ -290,7 +306,7 @@ func _test_scene() -> void:
 	check(main.world == null and not main.session.has_active_run() and main.run.gold == 0, "Confirmed replacement ends old adventure before entering hub")
 	main._on_action("range", null)
 	check(main.session.profile.level == 3 and main.session.profile.talent_points == 2, "UI new-game action retains permanent progression")
-	check(main.run.gold == 0 and main.run.shots_left == 10 and main.run.skill_levels.is_empty(), "UI new-game action resets only local growth")
+	check(main.run.gold == 0 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS and main.run.skill_levels.is_empty(), "UI new-game action resets only local growth")
 	var final_run_id: String = main.run.run_id
 	main.run.shots_left = 0
 	main.run.settle_volley()

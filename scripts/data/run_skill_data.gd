@@ -28,6 +28,18 @@ func price(rank: int) -> int:
 func mastery_price(rank: int) -> int:
 	return ceili(minf(1000000000.0, mastery_cost * pow(mastery_cost_growth, clampi(rank, 0, mastery_max_level))))
 
+func paced_price(rank: int, mastery: bool = false) -> int:
+	# Damage branch, revision 3. Freeze these constants for existing saves.
+	if mastery:
+		var start: int = ceili(paced_price(maxi(0, max_level - 1)) * 1.5)
+		return ceili(minf(1000000000.0, start * pow(mastery_cost_growth, clampi(rank, 0, mastery_max_level))))
+	var level: int = clampi(rank, 0, max_level)
+	if level <= 2: return price(level)
+	return ceili(cost * pow(cost_growth, 2) * pow(1.0 + 0.25 * (level - 2), 1.6))
+
+func paced_damage(rank: int) -> float:
+	return float(additions.get("damage", 0.0)) * max_level * pow(float(clampi(rank, 0, max_level)) / maxi(1, max_level), 0.4)
+
 func mastery_weight(rank: int) -> float:
 	var total: float = 0.0
 	for index: int in range(clampi(rank, 0, mastery_max_level)):

@@ -30,6 +30,9 @@ func _run() -> void:
 	root.add_child(main)
 	main.capture_path = "boss-combat-window-test"
 	main._new_run()
+	# Frozen T10-B contact amounts also exercise continued pre-resilience saves.
+	# The current rules are exercised by test_balance_window --resilient.
+	main.run.balance_revision = 1
 	main.world.set_physics_process(false)
 	var base: RefCounted = preload("res://tests/test_boss.gd").new(check)
 	var combat: RefCounted = preload("res://tests/test_boss_combat.gd").new(check)
@@ -42,14 +45,14 @@ func _run() -> void:
 	arrow._physics_process(0.02)
 	main.world._physics_process(0)
 	check(main.world.boss.hp == 1138 and main.world.boss.battle_phase == 2, "real weak contact crosses half health without healing")
-	check(main.run.shots_left == 9 and main.run.bosses_defeated == 0, "phase switch spends one draw and grants no victory")
+	check(main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 1 and main.run.bosses_defeated == 0, "phase switch spends one draw and grants no victory")
 	await capture("phase-two")
 	check(main.hud.boss_title.text.contains("阶段 2") and main.hud.boss_hint.text.contains("护板甲 28"), "phase two HUD exposes shield armor")
 	main.world.labels.clear()
 	arrow = combat.shot(main.world, Vector2(340, 205), Vector2(10000, 0), 100, 28)
 	arrow._physics_process(0.02)
 	main.world._physics_process(0)
-	check(main.world.boss.hp == 1138 and main.run.shots_left == 8, "equal armor blocks a real shield contact")
+	check(main.world.boss.hp == 1138 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 2, "equal armor blocks a real shield contact")
 	await capture("shield-blocked")
 	main.world.labels.clear()
 	arrow = combat.shot(main.world, Vector2(340, 205), Vector2(10000, 0), 100, 29)
@@ -81,7 +84,7 @@ func _run() -> void:
 	for restored: Arrow in main.world.arrows: restored.set_physics_process(false)
 	await capture("continued")
 	check(main.world.boss.position == body_pose and main.world.boss.shield_position == shield_pose, "disk Continue preserves both rendered poses")
-	check(main.world.boss.hp == 963 and main.run.shots_left == 7 and main.world.targets.is_empty(), "Continue preserves damage and spent draws without ordinary targets")
+	check(main.world.boss.hp == 963 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 3 and main.world.targets.is_empty(), "Continue preserves damage and spent draws without ordinary targets")
 	arrow = combat.shot(main.world, Vector2(340, body_pose.y), Vector2(10000, 0), 100, 0)
 	arrow._physics_process(0.02)
 	main.world._physics_process(0)

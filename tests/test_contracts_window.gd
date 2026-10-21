@@ -79,7 +79,7 @@ func run() -> void:
 	var selected: Dictionary = main.router.selected_contracts.duplicate()
 	await capture("custom-contracts")
 	await click(control("ContractsStart"))
-	check(main.router.route == "range" and main.run.challenge.selection == selected and main.run.initial_shots == 8 and main.run.artifact_capacity == 4 and main.world.targets[0].max_hp == 60, "start commits actual selected rules to battlefield")
+	check(main.router.route == "range" and main.run.challenge.selection == selected and main.run.initial_shots == RunModel.CURRENT_INITIAL_SHOTS - 2 and main.run.artifact_capacity == 4 and main.world.targets[0].max_hp == 60, "start commits actual selected rules to battlefield")
 	await capture("range")
 	await click(main.hud.encounters_button)
 	check(main.hud.encounter_panel.find_child("ArtifactSlots", true, false).get_child_count() == 4, "backpack renders four restricted slots")
@@ -97,7 +97,7 @@ func run() -> void:
 	check(main.run.challenge.selection == selected and main.router.selected_contracts == selected, "disabled clicks and stale action cannot alter active run")
 	await capture("locked-contracts")
 	await click(control("ContractsStart"))
-	check(main.run.shots_left == 8 and not main.run.suspended, "resume does not create a different challenge")
+	check(main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 2 and not main.run.suspended, "resume does not create a different challenge")
 	main.world.set_physics_process(false)
 	main.world.direction = Vector2.RIGHT
 	main.world.pull = 1
@@ -105,7 +105,7 @@ func run() -> void:
 	for arrow: Arrow in main.world.arrows: arrow.set_physics_process(false)
 	main._on_action("hub", null)
 	var payload: Dictionary = main.saves.read()
-	check(not payload.is_empty() and ContractCatalog.normalize(payload.run.challenge.selection) == selected and payload.run.shots_left == 7 and payload.world.arrows.size() == 1, "actual UI checkpoints live flight and locked contract")
+	check(not payload.is_empty() and ContractCatalog.normalize(payload.run.challenge.selection) == selected and payload.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 3 and payload.world.arrows.size() == 1, "actual UI checkpoints live flight and locked contract")
 	var challenge: Dictionary = main.run.challenge
 	main.queue_free()
 	await process_frame
@@ -120,7 +120,7 @@ func run() -> void:
 	await click(control("OpenContracts"))
 	check(main.run.challenge == challenge and (control("Preset_normal") as Button).disabled, "fresh scene opens continued immutable contract")
 	await click(control("ContractsStart"))
-	check(main.world.arrows.size() == 1 and main.world.targets[0].max_hp == 60 and main.run.shots_left == 7, "continued flight uses same target health and draws")
+	check(main.world.arrows.size() == 1 and main.world.targets[0].max_hp == 60 and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 3, "continued flight uses same target health and draws")
 	main.session.record_defeat("ui-rank", 40, 8)
 	main.session.end_run("abandoned")
 	main._on_action("leaderboard", null)
@@ -133,7 +133,7 @@ func run() -> void:
 	await click(control("CloseRecord"))
 	check(control("CloseRecord") == null, "record closes")
 	main._on_action("new_run", null)
-	check(main.run.challenge == challenge and main.run.shots_left == 8, "retry keeps contract composition and resets draws")
+	check(main.run.challenge == challenge and main.run.shots_left == RunModel.CURRENT_INITIAL_SHOTS - 2, "retry keeps contract composition and resets draws")
 	main.run.shots_left = 0
 	main.run.settle_volley()
 	await capture("result")

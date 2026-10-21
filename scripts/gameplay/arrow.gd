@@ -33,6 +33,8 @@ var bounce_stacks: int = 0
 var echo_ready: bool = false
 var critical_stacks: int = 0
 var area_slots: Array[int] = []
+var active_effect: String = ""
+var active_target: String = ""
 # Each overlapping volume has its own captured exit, independent of respawns.
 var penetration_exits: Array[Dictionary] = []
 
@@ -44,6 +46,7 @@ func setup(origin: Vector2, initial_velocity: Vector2, bow: BowStats, strength: 
 	rng = random
 	remaining_bounces = stats.bounces
 	rotation = velocity.angle()
+	queue_redraw()
 
 func _physics_process(delta: float) -> void:
 	if done: return
@@ -71,6 +74,10 @@ func _physics_process(delta: float) -> void:
 		for node: Node in get_tree().get_nodes_in_group("archery_targets"):
 			var target := node as ArcheryTarget
 			if target.get_parent() != get_parent() or target.hp <= 0.0: continue
+			# Ordinary targets have one lifetime slot. Avoid allocating their volume
+			# dictionaries again after this arrow has already resolved that slot.
+			# Boss parts keep independent shield/core/body exclusions below.
+			if not target is ArcheryBoss and hit_slots.has(target.slot): continue
 			# Field targets and arrows share unrotated local coordinates, including scale=2.
 			for volume: Dictionary in target.collision_volumes():
 				if hit_slots.has(int(volume["slot"])): continue
@@ -102,8 +109,9 @@ func _physics_process(delta: float) -> void:
 			hit_slots.append(int(volume["slot"]))
 			var part: String = str(volume["part"])
 			var shot: BowStats = contact_stats(target, global_position, part)
-			var result: Dictionary = target.receive_contact(shot, pull, global_position, rng.randf(), part)
+			var result: Dictionary = target.receive_contact(shot, pull, global_position, rng.randf(), part, shot_id)
 			if not result.is_empty():
+				result["active_boosted"] = active_effect == "sunshot" or (active_effect == "hunters_mark" and active_target == target.defeat_id())
 				if float(result["effective"]) > 0:
 					result["trait_boosted"] = shot.damage > stats.damage
 					echo_ready = false
@@ -143,10 +151,12 @@ func _physics_process(delta: float) -> void:
 	rotation = velocity.angle()
 	trail.push_front(position)
 	if trail.size() > 10: trail.pop_back()
-	queue_redraw()
+	# Flight changes the CanvasItem transform, not the cached arrow geometry.
+	# World draws the moving trail separately; setup/equipment invalidate the body.
 
 func snapshot() -> Dictionary:
 	return {"shot_id": shot_id, "source_id": source_id, "parent_source_id": parent_source_id,
+		"active_effect": active_effect, "active_target": active_target,
 		"combat_schema": 3, "critical_stacks": critical_stacks, "area_slots": area_slots.duplicate(),
 		"penetration_stacks": penetration_stacks, "bounce_stacks": bounce_stacks,
 		"echo_ready": echo_ready, "penetration_exits": penetration_exits.duplicate(true),
@@ -157,6 +167,8 @@ func snapshot() -> Dictionary:
 		"hit_slots": hit_slots.duplicate(), "remaining_bounces": remaining_bounces}
 
 func restore(data: Dictionary, random: RandomNumberGenerator) -> void:
+	active_effect = str(data.get("active_effect", ""))
+	active_target = str(data.get("active_target", ""))
 	critical_stacks = int(data.get("critical_stacks", 0))
 	area_slots.assign(data.get("area_slots", []))
 	penetration_stacks = int(data.get("penetration_stacks", 0))
@@ -181,7 +193,10 @@ func contact_stats(target: ArcheryTarget, point: Vector2, part: String) -> BowSt
 	var shot: BowStats = stats.duplicate() as BowStats
 	var charged: int = int(floorf(clampf(pull, 0.0, 1.0) * effects.charged_penetration + 1.0e-9))
 	shot.armor_penetration = mini(1000000, stats.armor_penetration + bounce_stacks * effects.bounce_penetration + charged)
+	if active_effect == "sunshot": shot.armor_penetration = mini(1000000, shot.armor_penetration + 12)
 	if part != "shield":
+		if active_effect == "sunshot": shot.damage *= 2.0
+		elif active_effect == "hunters_mark" and target.defeat_id() == active_target: shot.damage *= 1.6
 		var surplus: int = maxi(0, shot.armor_penetration - target.contact_armor(point, part))
 		shot.damage *= (1.0 + penetration_stacks * effects.penetration_damage)
 		shot.damage *= (1.0 + critical_stacks * effects.critical_damage)
@@ -192,6 +207,8 @@ func contact_stats(target: ArcheryTarget, point: Vector2, part: String) -> BowSt
 	return shot
 
 func inherit_combat(parent: Arrow) -> void:
+	active_effect = parent.active_effect
+	active_target = parent.active_target
 	penetration_stacks = parent.penetration_stacks
 	bounce_stacks = parent.bounce_stacks
 	echo_ready = parent.echo_ready
@@ -232,3 +249,10 @@ func _finish() -> void:
 func _draw() -> void:
 	if stats == null: return
 	CosmeticDrawing.arrow(self, cosmetic, Vector2.ZERO, stats.arrow_size, parent_source_id >= 0, stats.collision_radius())
+	match active_effect:
+		"sunshot":
+			draw_line(Vector2(-12, 0), Vector2.ZERO, Color("ffdc83"), 1)
+			draw_rect(Rect2(-1, -1, 2, 2), Color("fff1bc"))
+		"quickdraw":
+			for y: int in [-2, 2]: draw_line(Vector2(-14, y), Vector2(-7, y), Color("a8dce5"), 1)
+		"hunters_mark": draw_line(Vector2(-10, 0), Vector2(-4, 0), Color("a4e2c0"), 2)

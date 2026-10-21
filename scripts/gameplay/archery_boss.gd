@@ -12,11 +12,16 @@ var phase_clock: float = 0.0
 var parameters: Dictionary = {}
 var shield_position: Vector2
 var shield_flash: float = 0.0
+var impact_revision: int = 0
+var volley_pressure: Dictionary = {}
+const BURST_RATIO: float = 0.2
 
 func configure_boss(config: BossRules, number: int, mode: Dictionary = {}) -> void:
 	rules = config
 	round_number = number
 	parameters = config.combat_parameters()
+	impact_revision = int(mode.get("boss_impact_revision", 0))
+	volley_pressure.clear()
 	var data := TargetData.new()
 	data.id = &"mechanical_boss"
 	data.title = rules.title
@@ -38,7 +43,7 @@ func defeat_id() -> String:
 func receive_hit(stats: BowStats, strength: float, point: Vector2, roll: float) -> Dictionary:
 	return receive_contact(stats, strength, point, roll, "body")
 
-func receive_contact(stats: BowStats, strength: float, point: Vector2, roll: float, part: String) -> Dictionary:
+func receive_contact(stats: BowStats, strength: float, point: Vector2, roll: float, part: String, shot_id: int = 0) -> Dictionary:
 	if hp <= 0: return {}
 	if combat_schema == 0:
 		var old: Dictionary = super.receive_hit(stats, strength, point, roll)
@@ -57,7 +62,8 @@ func receive_contact(stats: BowStats, strength: float, point: Vector2, roll: flo
 	var shot: BowStats = stats.duplicate() as BowStats
 	if weak: shot.damage *= float(parameters["weak_multiplier"])
 	var hit_armor: int = maxi(0, armor - int(parameters["weak_armor_reduction"])) if weak else armor
-	var hit: Dictionary = CombatMath.resolve_hit(shot, strength, weak, hp, roll, hit_armor)
+	var hit: Dictionary = CombatMath.resolve_hit(shot, strength, weak, INF, roll, hit_armor)
+	_apply_resilience(hit, shot_id)
 	hp = maxf(0.0, hp - float(hit["effective"]))
 	hit["broken"] = hp <= 0
 	hit["event_id"] = defeat_id()
@@ -68,6 +74,7 @@ func receive_contact(stats: BowStats, strength: float, point: Vector2, roll: flo
 	hit["excluded_slots"] = [-1, -3] # Body and weak point share one HP hit per arrow.
 	flash = 1.0
 	if hp <= 0:
+		TargetBreakup.spawn_from(self)
 		respawn_left = RULES.respawn_seconds
 		set_deferred("collision_layer", 0)
 	else: refresh_phase()
@@ -78,14 +85,34 @@ func is_bullseye(point: Vector2) -> bool:
 	if combat_schema == 0: return super.is_bullseye(point)
 	return absf(point.y - global_position.y) <= float(parameters["weak_half_height"]) * global_scale.y
 
-func receive_area(damage: float, penetration: int) -> Dictionary:
-	var hit: Dictionary = super.receive_area(damage, penetration)
+func receive_area(damage: float, penetration: int, shot_id: int = 0) -> Dictionary:
+	if hp <= 0: return {}
+	var shot := BowStats.new()
+	shot.damage = damage
+	shot.crit_chance = 0.0
+	shot.armor_penetration = penetration
+	var hit: Dictionary = CombatMath.resolve_hit(shot, 1.0, false, INF, 1.0, armor)
+	_apply_resilience(hit, shot_id)
+	hit["pierced"] = false
+	hit["can_split"] = false
+	hit["damage_kind"] = "area"
+	hit = apply_hit(hit)
 	if hit.is_empty(): return hit
 	hit["is_boss"] = true
 	hit["boss_part"] = "body"
 	hit["excluded_slots"] = [-1, -3]
 	refresh_phase()
 	return hit
+
+func _apply_resilience(hit: Dictionary, shot_id: int) -> void:
+	var incoming: float = float(hit["effective"])
+	if impact_revision == 1:
+		var key: String = str(shot_id)
+		var previous: float = float(volley_pressure.get(key, 0.0))
+		hit["effective"] = BossRules.resilient_damage(previous, incoming, max_hp * BURST_RATIO)
+		volley_pressure[key] = previous + incoming
+		hit["resisted"] = maxf(0.0, incoming - float(hit["effective"]))
+	hit["effective"] = minf(hp, float(hit["effective"]))
 
 func contact_armor(point: Vector2, part: String) -> int:
 	if combat_schema == 0: return armor
@@ -149,6 +176,8 @@ func snapshot() -> Dictionary:
 	var state: Dictionary = super.snapshot()
 	state["round_number"] = round_number
 	state["health_revision"] = 2
+	state["impact_revision"] = impact_revision
+	state["volley_pressure"] = volley_pressure.duplicate()
 	state["combat_schema"] = combat_schema
 	state["battle_phase"] = battle_phase
 	state["phase_clock"] = phase_clock
@@ -160,6 +189,8 @@ func snapshot() -> Dictionary:
 func restore(state: Dictionary) -> void:
 	var upgraded: Dictionary = upgrade_state(state)
 	super.restore(upgraded)
+	impact_revision = int(upgraded.get("impact_revision", 0))
+	volley_pressure = upgraded.get("volley_pressure", {}).duplicate()
 	combat_schema = int(upgraded["combat_schema"])
 	battle_phase = int(upgraded["battle_phase"])
 	phase_clock = float(upgraded["phase_clock"])
@@ -172,35 +203,5 @@ func restore(state: Dictionary) -> void:
 	shield_position = Vector2(shield[0], shield[1])
 
 func _draw() -> void:
-	if rules == null: return
-	var width: float = float(parameters["body_width"])
-	var half: float = width * 0.5
-	var radius: float = float(parameters["body_radius"])
-	var tint: Color = Color("657e83").lerp(Color("fff2ce"), flash)
-	draw_rect(Rect2(-half + 4, radius, 8, 308 - position.y - radius), Color("445859"))
-	draw_rect(Rect2(-half - 7, 306 - position.y, width + 14, 5), Color("89947e"))
-	if hp <= 0:
-		draw_rect(Rect2(-half, -radius, width, radius * 2), Color("294044"), false, 2)
-		return
-	draw_rect(Rect2(-half - 3, -radius - 3, width + 6, radius * 2 + 6), Color("12242c"))
-	draw_rect(Rect2(-half, -radius, width, radius * 2), tint)
-	draw_rect(Rect2(-half + 5, -radius + 9, width - 10, radius * 2 - 18), Color("354e59").lerp(Color("e9d7ac"), flash))
-	for y: float in [-radius + 4, radius - 8]:
-		for x: float in [-half + 3, half - 7]:
-			draw_rect(Rect2(x, y, 4, 4), Color("d6bb78"))
-	for y: int in [-42, 34]:
-		draw_rect(Rect2(-half + 3, y, width - 6, 8), Color("9a835e"))
-	var weak_half: float = float(parameters["weak_half_height"]) if combat_schema == 1 else 11.0
-	draw_rect(Rect2(-half, -radius * 0.26, width, radius * 0.52), Color("b56345").lerp(Color("ffebad"), flash))
-	draw_rect(Rect2(-half - 2 if combat_schema == 1 else -half + 5, -weak_half, width + 4 if combat_schema == 1 else width - 10, weak_half * 2), Color("e4c681"))
-	draw_rect(Rect2(-half + 11, -5, width - 22, 10), Color("f6ebbd"))
-	if combat_schema == 1:
-		draw_string(ThemeDB.fallback_font, Vector2(half + 7, 4), "弱点 ×%.2f" % float(parameters["weak_multiplier"]), HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("ffdc83"))
-	if combat_schema == 1 and battle_phase == 2:
-		var offset: Vector2 = shield_position - position
-		var size := Vector2(float(parameters["shield_width"]), float(parameters["shield_height"]))
-		draw_line(Vector2(-half, offset.y), offset, Color("42565b"), 3)
-		draw_rect(Rect2(offset - size * 0.5 - Vector2(2, 2), size + Vector2(4, 4)), Color("14242b"))
-		draw_rect(Rect2(offset - size * 0.5, size), Color("8eacb4").lerp(Color("fff2ce"), shield_flash))
-		draw_rect(Rect2(offset - size * 0.5 + Vector2(3, 3), size - Vector2(6, 6)), Color("4b6776"))
-		draw_string(ThemeDB.fallback_font, offset + Vector2(-38, -size.y * 0.5 - 6), "护板 A %d" % shield_armor(), HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("9fc7db"))
+	if rules == null or collider == null: return
+	TargetArt.boss(self, self)
